@@ -36,7 +36,7 @@ pipeline {
             steps {
                 // Docker push step
                 script {
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                    docker.withRegistry('', "${GITHUB_CREDENTIALS}") {
                         sh 'docker push nginx:ver1'
                     }
                 }
