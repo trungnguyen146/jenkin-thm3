@@ -3,6 +3,7 @@ pipeline {
     
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
+        
     }
 
     stages {
@@ -15,19 +16,35 @@ pipeline {
 
         stage('Build') {
             steps {
-                // Your build steps here (Docker build, etc.)
+                // Docker build step
                 sh 'docker build -t nginx:ver1 --force-rm -f Dockerfile .'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                script {
+                    // Docker login step
+                    docker.withRegistry('', "${GITHUB_CREDENTIALS}") {
+                        echo 'Docker login successful!'
+                    }
+                }
             }
         }
 
         stage('Deploy') {
             steps {
-                // Your deploy steps here
-                sh 'docker push nginx:ver1'
+                // Docker push step
+                script {
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                        sh 'docker push nginx:ver1'
+                    }
+                }
             }
         }
     }
 }
+
 
 
 // # Đoạn này để test kết nối
