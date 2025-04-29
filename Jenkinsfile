@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    
+    environment {
+        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
+    }
 
     stages {
         stage('Checkout') {
