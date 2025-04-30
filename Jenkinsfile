@@ -2,51 +2,78 @@
 
 pipeline {
     agent any
-
-    environment {
-        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-        DOCKER_CREDENTIALS = 'github-pat'  // ID của Docker credentials
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm  // Checkout the code from GitHub repository
-            }
+    stages{
+        stage('Git clone'){
+            steps{
+                git branch: 'main', url: 'https://github.com/trungnguyen146/jenkin-thm3.git'
+            }  
         }
 
-        stage('Build') {
-            steps {
-                script {
-                    // Docker build step using Docker plugin
-                    docker.build("nginx:ver1", "-f Dockerfile .")
-                }
-            }
+        stage('Docker build image'){
+            steps{
+                sh "docker build -t nginx:ver1 --force-rm -f Dockerfile ."
+            }  
         }
 
-        stage('Docker Login') {
-            steps {
-                script {
-                    // Docker login step using Docker credentials
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-                        echo 'Docker login successful!'
-                    }
-                }
-            }
+        stage('Build complete'){
+            steps{
+                echo "Docker build complete"
+            }  
         }
-
-        stage('Deploy') {
-            steps {
-                script {
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-                        // Docker push step using Docker plugin
-                        docker.push('nginx:ver1')
-                    }
-                }
-            }
-        }
+        
     }
 }
+
+
+
+
+// pipeline {
+//     agent any
+
+//     environment {
+//         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
+//         DOCKER_CREDENTIALS = 'github-pat'  // ID của Docker credentials
+//     }
+
+//     stages {
+//         stage('Checkout') {
+//             steps {
+//                 checkout scm  // Checkout the code from GitHub repository
+//             }
+//         }
+
+//         stage('Build') {
+//             steps {
+//                 script {
+//                     // Docker build step using Docker plugin
+//                     docker.build("nginx:ver1", "-f Dockerfile .")
+//                 }
+//             }
+//         }
+
+//         stage('Docker Login') {
+//             steps {
+//                 script {
+//                     // Docker login step using Docker credentials
+//                     docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+//                         echo 'Docker login successful!'
+//                     }
+//                 }
+//             }
+//         }
+
+//         stage('Deploy') {
+//             steps {
+//                 script {
+//                     docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+//                         // Docker push step using Docker plugin
+//                         docker.push('nginx:ver1')
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
 
 
