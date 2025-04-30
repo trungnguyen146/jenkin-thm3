@@ -5,7 +5,7 @@ pipeline {
 
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-        DOCKER_CREDENTIALS = 'docker-credentials'  // ID của Docker credentials
+        DOCKER_CREDENTIALS = 'github-pat'  // ID của Docker credentials
     }
 
     stages {
