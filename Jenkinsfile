@@ -5,6 +5,7 @@ pipeline {
     
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
+        DOCKER_CREDENTIALS = 'docker-credentials'  // ID của Docker credentials
     }
 
     stages {
@@ -28,7 +29,7 @@ pipeline {
             steps {
                 script {
                     // Docker login step
-                    docker.withRegistry('', "${GITHUB_CREDENTIALS}") {
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
                         echo 'Docker login successful!'
                     }
                 }
@@ -38,7 +39,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    docker.withRegistry('', "${GITHUB_CREDENTIALS}") {
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
                         // Docker push step
                         docker.push('nginx:ver1')
                     }
