@@ -4,7 +4,8 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials trong Jenkins
+        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
+        DOCKER_CREDENTIALS = 'docker-credentials'  // ID của Docker credentials
     }
 
     stages {
@@ -16,16 +17,18 @@ pipeline {
 
         stage('Build') {
             steps {
-                // Docker build step using shell command
-                sh 'docker build -t nginx:ver1 --force-rm -f Dockerfile .'
+                script {
+                    // Docker build step using Docker plugin
+                    docker.build("nginx:ver1", "-f Dockerfile .")
+                }
             }
         }
 
         stage('Docker Login') {
             steps {
                 script {
-                    // Docker login using GitHub PAT stored in Jenkins credentials
-                    docker.withRegistry('', 'github-jenkins') {
+                    // Docker login step using Docker credentials
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
                         echo 'Docker login successful!'
                     }
                 }
@@ -34,12 +37,17 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                // Docker push step using shell command
-                sh 'docker push nginx:ver1'
+                script {
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                        // Docker push step using Docker plugin
+                        docker.push('nginx:ver1')
+                    }
+                }
             }
         }
     }
 }
+
 
 
 
