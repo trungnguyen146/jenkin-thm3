@@ -5,8 +5,8 @@ pipeline {
 
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-        DOCKER_USERNAME = 'trungnguyen1462k@gmail.com'  // Docker Hub username
-        // DOCKER_PASSWORD = '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'  // Docker Hub password
+        GITHUB_PAT = 'github-pat'  // Docker Hub username and PAT
+        
     }
 
     stages {
