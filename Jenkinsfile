@@ -56,7 +56,7 @@ pipeline {
             steps {
                 script {
                     // Docker login step using Docker credentials
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
                         echo 'Docker login successful!'
                     }
                 }
