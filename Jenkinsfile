@@ -5,7 +5,6 @@ pipeline {
     
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-        
     }
 
     stages {
@@ -19,7 +18,9 @@ pipeline {
         stage('Build') {
             steps {
                 // Docker build step
-                sh 'docker build -t nginx:ver1 --force-rm -f Dockerfile .'
+                script {
+                    def customImage = docker.build("nginx:ver1", "-f Dockerfile .")
+                }
             }
         }
 
@@ -36,16 +37,17 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                // Docker push step
                 script {
                     docker.withRegistry('', "${GITHUB_CREDENTIALS}") {
-                        sh 'docker push nginx:ver1'
+                        // Docker push step
+                        docker.push('nginx:ver1')
                     }
                 }
             }
         }
     }
 }
+
 
 
 
