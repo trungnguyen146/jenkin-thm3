@@ -2,52 +2,45 @@
 
 pipeline {
     agent any
-    
+
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-        DOCKER_CREDENTIALS = 'docker-credentials'  // ID của Docker credentials
+        DOCKER_USERNAME = 'trungnguyen1462k@gmail.com'  // Docker Hub username
+        DOCKER_PASSWORD = 'Trungnguyen@1406.'  // Docker Hub password
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the code from GitHub repository
-                checkout scm
+                checkout scm  // Checkout the code from GitHub repository
             }
         }
 
         stage('Build') {
             steps {
-                // Docker build step
-                script {
-                    def customImage = docker.build("nginx:ver1", "-f Dockerfile .")
-                }
+                // Docker build step using shell command
+                sh 'docker build -t nginx:ver1 --force-rm -f Dockerfile .'
             }
         }
 
         stage('Docker Login') {
             steps {
-                script {
-                    // Docker login step
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-                        echo 'Docker login successful!'
-                    }
-                }
+                // Docker login using shell command
+                sh '''
+                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                '''
             }
         }
 
         stage('Deploy') {
             steps {
-                script {
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-                        // Docker push step
-                        docker.push('nginx:ver1')
-                    }
-                }
+                // Docker push step using shell command
+                sh 'docker push nginx:ver1'
             }
         }
     }
 }
+
 
 
 
