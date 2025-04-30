@@ -4,9 +4,7 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-        GITHUB_PAT = 'github-pat'  // Docker Hub username and PAT
-        
+        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials trong Jenkins
     }
 
     stages {
@@ -25,10 +23,12 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                // Docker login using shell command
-                sh '''
-                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                '''
+                script {
+                    // Docker login using GitHub PAT stored in Jenkins credentials
+                    docker.withRegistry('', 'github-jenkins') {
+                        echo 'Docker login successful!'
+                    }
+                }
             }
         }
 
@@ -40,6 +40,7 @@ pipeline {
         }
     }
 }
+
 
 
 
