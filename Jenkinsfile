@@ -25,27 +25,27 @@ pipeline {
             }
         }
 
-        // stage('Docker Login') {
-        //     steps {
-        //         script {
-        //             // Docker login step
-        //             docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-        //                 echo 'Docker login successful!'
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Docker Login') {
+            steps {
+                script {
+                    // Docker login step
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                        echo 'Docker login successful!'
+                    }
+                }
+            }
+        }
 
-        // stage('Deploy') {
-        //     steps {
-        //         script {
-        //             docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-        //                 // Docker push step
-        //                 docker.push('nginx:ver1')
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Deploy') {
+            steps {
+                script {
+                    docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                        // Docker push step
+                        docker.push('nginx:ver1')
+                    }
+                }
+            }
+        }
     }
 }
 
