@@ -86,7 +86,7 @@ pipeline {
                     docker rm nginx-container || true
                     '''
                     // Chạy container mới
-                    sh 'docker run -d --name nginx-container -p 80:80 trungnguyen146/nginx:ver1'
+                    sh 'docker run -d --name nginx-container -p 8888:80 trungnguyen146/nginx:ver1'
                 }
             }
         }
