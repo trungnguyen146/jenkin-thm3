@@ -1,22 +1,23 @@
 pipeline {
-    agent any
-
+    agent {
+        docker {
+            image 'docker:dind'
+            args '-v /var/run/docker.sock:/var/run/docker.sock --privileged'
+        }
+    }
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'
         DOCKER_CREDENTIALS = 'github-pat'
     }
-
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-
         stage('Setup Buildx') {
             steps {
                 script {
-                    // Kiểm tra và cài đặt buildx nếu cần
                     sh '''
                     if ! docker buildx version; then
                         echo "buildx not found, attempting to install..."
@@ -28,11 +29,9 @@ pipeline {
                 }
             }
         }
-
         stage('Build') {
             steps {
                 script {
-                    // Chạy buildx với kiểm tra lỗi
                     sh '''
                     docker buildx build -t trungnguyen146/nginx:ver1 -f Dockerfile . --load || {
                         echo "buildx failed, falling back to docker build"
@@ -42,7 +41,6 @@ pipeline {
                 }
             }
         }
-
         stage('Docker Login') {
             steps {
                 script {
@@ -52,7 +50,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy') {
             steps {
                 script {
