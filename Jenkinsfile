@@ -5,14 +5,31 @@ pipeline {
             args '-v /var/run/docker.sock:/var/run/docker.sock --privileged'
         }
     }
+
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'
         DOCKER_CREDENTIALS = 'github-pat'
     }
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Setup Buildx') {
+            steps {
+                script {
+                    sh '''
+                    if ! docker buildx version; then
+                        echo "buildx not found, attempting to install..."
+                        docker buildx install || echo "buildx install failed, proceeding with default build"
+                        docker buildx create --name mybuilder --use || echo "Failed to create builder, using default"
+                    fi
+                    docker buildx ls || echo "buildx ls failed"
+                    '''
+                }
             }
         }
 
@@ -28,6 +45,7 @@ pipeline {
                 }
             }
         }
+
         stage('Docker Login') {
             steps {
                 script {
@@ -37,6 +55,7 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy') {
             steps {
                 script {
@@ -44,6 +63,30 @@ pipeline {
                         def dockerImage = docker.image("trungnguyen146/nginx:ver1")
                         dockerImage.push()
                     }
+                }
+            }
+        }
+
+        stage('Pull Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
+                        sh 'docker pull trungnguyen146/nginx:ver1'
+                    }
+                }
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    // Dừng và xóa container cũ (nếu có)
+                    sh '''
+                    docker stop nginx-container || true
+                    docker rm nginx-container || true
+                    '''
+                    // Chạy container mới
+                    sh 'docker run -d --name nginx-container -p 80:80 trungnguyen146/nginx:ver1'
                 }
             }
         }
