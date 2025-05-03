@@ -15,20 +15,7 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Setup Buildx') {
-            steps {
-                script {
-                    sh '''
-                    if ! docker buildx version; then
-                        echo "buildx not found, attempting to install..."
-                        docker buildx install || echo "buildx install failed, proceeding with default build"
-                        docker buildx create --name mybuilder --use || echo "Failed to create builder, using default"
-                    fi
-                    docker buildx ls || echo "buildx ls failed"
-                    '''
-                }
-            }
-        }
+
         stage('Build') {
             steps {
                 script {
