@@ -13,11 +13,31 @@ pipeline {
             }
         }
 
+        stage('Setup Buildx') {
+            steps {
+                script {
+                    // Kiểm tra và cài đặt buildx nếu cần
+                    sh '''
+                    if ! docker buildx version; then
+                        echo "buildx not found, attempting to install..."
+                        docker buildx install || echo "buildx install failed, proceeding with default build"
+                        docker buildx create --name mybuilder --use || echo "Failed to create builder, using default"
+                    fi
+                    docker buildx ls || echo "buildx ls failed"
+                    '''
+                }
+            }
+        }
+
         stage('Build') {
             steps {
                 script {
+                    // Chạy buildx với kiểm tra lỗi
                     sh '''
-                    docker buildx build -t trungnguyen146/nginx:ver1 -f Dockerfile . --load
+                    docker buildx build -t trungnguyen146/nginx:ver1 -f Dockerfile . --load || {
+                        echo "buildx failed, falling back to docker build"
+                        docker build -t trungnguyen146/nginx:ver1 -f Dockerfile .
+                    }
                     '''
                 }
             }
@@ -26,10 +46,8 @@ pipeline {
         stage('Docker Login') {
             steps {
                 script {
-                    // Thêm log để kiểm tra đăng nhập
                     docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
                         echo 'Đăng nhập Docker thành công!'
-                        sh 'docker info'  // Kiểm tra trạng thái Docker
                     }
                 }
             }
