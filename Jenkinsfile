@@ -1,33 +1,4 @@
 
-// # Testing 
-
-// pipeline {
-//     agent any
-//     stages{
-//         stage('Git clone'){
-//             steps{
-//                 git branch: 'main', url: 'https://github.com/trungnguyen146/jenkin-thm3.git'
-//             }  
-//         }
-
-//         stage('Docker build image'){
-//             steps{
-//                 sh "docker build -t nginx:ver1 --force-rm -f Dockerfile ."
-//             }  
-//         }
-
-//         stage('Build complete'){
-//             steps{
-//                 echo "Docker build complete"
-//             }  
-//         }
-        
-//     }
-// }
-
-
-
-
 pipeline {
     agent any
 
@@ -67,8 +38,9 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
+                        def dockerImage = docker.image("trungnguyen146/nginx:ver1")
                         // Docker push step using Docker plugin
-                        docker.push('nginx:ver1')
+                        docker.push()
                     }
                 }
             }
@@ -78,6 +50,31 @@ pipeline {
 
 
 
+// # Testing 
+
+// pipeline {
+//     agent any
+//     stages{
+//         stage('Git clone'){
+//             steps{
+//                 git branch: 'main', url: 'https://github.com/trungnguyen146/jenkin-thm3.git'
+//             }  
+//         }
+
+//         stage('Docker build image'){
+//             steps{
+//                 sh "docker build -t nginx:ver1 --force-rm -f Dockerfile ."
+//             }  
+//         }
+
+//         stage('Build complete'){
+//             steps{
+//                 echo "Docker build complete"
+//             }  
+//         }
+        
+//     }
+// }
 
 
 
