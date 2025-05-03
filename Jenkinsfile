@@ -2,21 +2,20 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_CREDENTIALS = 'github-jenkins'  // ID của thông tin xác thực GitHub
-        DOCKER_CREDENTIALS = 'github-pat'     // ID của thông tin xác thực Docker
+        GITHUB_CREDENTIALS = 'github-jenkins'
+        DOCKER_CREDENTIALS = 'github-pat'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm  // Lấy mã nguồn từ kho GitHub
+                checkout scm
             }
         }
 
         stage('Build') {
             steps {
                 script {
-                    // Sử dụng buildx để xây dựng hình ảnh
                     sh '''
                     docker buildx build -t trungnguyen146/nginx:ver1 -f Dockerfile . --load
                     '''
@@ -27,9 +26,10 @@ pipeline {
         stage('Docker Login') {
             steps {
                 script {
-                    // Đăng nhập vào Docker Hub
+                    // Thêm log để kiểm tra đăng nhập
                     docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
                         echo 'Đăng nhập Docker thành công!'
+                        sh 'docker info'  // Kiểm tra trạng thái Docker
                     }
                 }
             }
@@ -38,7 +38,6 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Đẩy hình ảnh Docker lên Docker Hub
                     docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
                         def dockerImage = docker.image("trungnguyen146/nginx:ver1")
                         dockerImage.push()
