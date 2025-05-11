@@ -7,8 +7,26 @@ pipeline {
     }
 
     environment {
-        GITHUB_CREDENTIALS = 'github-jenkins'
-        DOCKER_CREDENTIALS = 'github-pat'
+        DOCKERHUB_USERNAME = 'trungnguyen146' 
+        IMAGE_NAME_PREFIX = "${DOCKERHUB_USERNAME}/php-nginx-app"
+        DOCKER_CREDENTIALS_ID = 'github-pat' // docker hub cred 
+
+        // Stage_CredID
+        VPS_STAGING_CREDENTIALS_ID = 'your-vps-staging-ssh-credentials-id' 
+        VPS_STAGING_HOST = 'your-vps-staging-ip' 
+
+        // Prod_CredID
+        VPS_PRODUCTION_CREDENTIALS_ID = 'your-vps-production-ssh-credentials-id' // Thay bằng ID SSH credential cho VPS Production
+        VPS_PRODUCTION_HOST = 'your-vps-production-ip' 
+        
+        // Name
+        CONTAINER_NAME_STAGING = 'php-nginx-staging'
+        CONTAINER_NAME_PRODUCTION = 'php-nginx-prod'
+
+        //Port 
+        APPLICATION_PORT = 80 
+        HOST_PORT_STAGING = 8888 
+        HOST_PORT_PRODUCTION = 80 
     }
 
     stages {
@@ -18,173 +36,78 @@ pipeline {
             }
         }
 
-        stage('Setup Buildx') {
+        stage('Set Build Version') {
             steps {
                 script {
-                    sh '''
-                    if ! docker buildx version; then
-                        echo "buildx not found, attempting to install..."
-                        docker buildx install || echo "buildx install failed, proceeding with default build"
-                        docker buildx create --name mybuilder --use || echo "Failed to create builder, using default"
-                    fi
-                    docker buildx ls || echo "buildx ls failed"
-                    '''
+                    // Lấy số build Jenkins làm một phần của version
+                    BUILD_VERSION = "1.0.${BUILD_NUMBER}"
+                    DOCKER_IMAGE_TAGGED = "${env.IMAGE_NAME_PREFIX}:${BUILD_VERSION}"
+                    echo "Building Docker image with tag: ${DOCKER_IMAGE_TAGGED}"
                 }
             }
         }
 
-        stage('Build') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    sh '''
-                    docker buildx build -t trungnguyen146/nginx:ver1 -f Dockerfile . --load || {
-                        echo "buildx failed, falling back to docker build"
-                        docker build -t trungnguyen146/nginx:ver1 -f Dockerfile .
-                    }
-                    '''
-                }
-            }
-        }
-
-        stage('Docker Login') {
-            steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
-                        echo 'Đăng nhập Docker thành công!'
+                    sh "docker build -t ${DOCKER_IMAGE_TAGGED} -f Dockerfile ."
+                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS_ID}") {
+                        docker.image("${DOCKER_IMAGE_TAGGED}").push()
+                        echo "Pushed ${DOCKER_IMAGE_TAGGED} to Docker Hub"
                     }
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to Staging') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
-                        def dockerImage = docker.image("trungnguyen146/nginx:ver1")
-                        dockerImage.push()
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_STAGING_CREDENTIALS_ID}", host: "${VPS_STAGING_HOST}")]) {
+                    script {
+                        echo "Deploying ${DOCKER_IMAGE_TAGGED} to VPS Staging (${VPS_STAGING_HOST}:${HOST_PORT_STAGING})..."
+                        sh """
+                            ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST '
+                                docker pull ${DOCKER_IMAGE_TAGGED}
+                                docker stop ${CONTAINER_NAME_STAGING} || true
+                                docker rm ${CONTAINER_NAME_STAGING} || true
+                                docker run -d --name ${CONTAINER_NAME_STAGING} -p ${HOST_PORT_STAGING}:${APPLICATION_PORT} ${DOCKER_IMAGE_TAGGED}
+                                echo "Deployment to Staging complete."
+                            '
+                        """
                     }
                 }
             }
         }
 
-        stage('Pull Image') {
+        stage('Kiểm thử Staging (Manual)') {
             steps {
+                input message: 'Approve to proceed to Production after testing Staging?'
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
-                        sh 'docker pull trungnguyen146/nginx:ver1'
-                    }
+                    echo 'Please perform testing on the Staging environment now.'
+                    echo "Application should be available at http://${env.VPS_STAGING_HOST}:${env.HOST_PORT_STAGING}"
                 }
             }
         }
 
-        stage('Run Container') {
+        stage('Deploy to Production') {
+            when {
+                input message: 'Approve deployment to Production?'
+            }
             steps {
-                script {
-                    // Dừng và xóa container cũ (nếu có)
-                    sh '''
-                    docker stop nginx-container || true
-                    docker rm nginx-container || true
-                    '''
-                    // Chạy container mới
-                    sh 'docker run -d --name nginx-container -p 8888:80 trungnguyen146/nginx:ver1'
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
+                    script {
+                        echo "Deploying ${DOCKER_IMAGE_TAGGED} to VPS Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
+                        sh """
+                            ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST '
+                                docker pull ${DOCKER_IMAGE_TAGGED}
+                                docker stop ${CONTAINER_NAME_PRODUCTION} || true
+                                docker rm ${CONTAINER_NAME_PRODUCTION} || true
+                                docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${DOCKER_IMAGE_TAGGED}
+                                echo "Deployment to Production complete."
+                            '
+                        """
+                    }
                 }
             }
         }
     }
 }
-
-
-
-// pipeline {
-//     agent any
-
-//     environment {
-//         GITHUB_CREDENTIALS = 'github-jenkins'  // ID của GitHub credentials
-//         DOCKER_CREDENTIALS = 'github-pat'  // ID của Docker credentials
-//     }
-
-//     stages {
-//         stage('Checkout') {
-//             steps {
-//                 checkout scm  // Checkout the code from GitHub repository
-//             }
-//         }
-
-//         stage('Build') {
-//             steps {
-//                 script {
-//                     // Docker build step using Docker plugin
-//                     docker.build("nginx:ver1", "-f Dockerfile .")
-//                 }
-//             }
-//         }
-
-//         stage('Docker Login') {
-//             steps {
-//                 script {
-//                     // Docker login step using Docker credentials
-//                     docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-//                         echo 'Docker login successful!'
-//                     }
-//                 }
-//             }
-//         }
-
-//         stage('Deploy') {
-//             steps {
-//                 script {
-//                     docker.withRegistry('', "${DOCKER_CREDENTIALS}") {
-//                         def dockerImage = docker.image("trungnguyen146/nginx:ver1")
-//                         // Docker push step using Docker plugin
-//                         docker.push()
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
-
-
-
-// # Testing 
-
-// pipeline {
-//     agent any
-//     stages{
-//         stage('Git clone'){
-//             steps{
-//                 git branch: 'main', url: 'https://github.com/trungnguyen146/jenkin-thm3.git'
-//             }  
-//         }
-
-//         stage('Docker build image'){
-//             steps{
-//                 sh "docker build -t nginx:ver1 --force-rm -f Dockerfile ."
-//             }  
-//         }
-
-//         stage('Build complete'){
-//             steps{
-//                 echo "Docker build complete"
-//             }  
-//         }
-        
-//     }
-// }
-
-
-
-
-// # Đoạn này để test kết nối
-// pipeline {
-//     agent any
-
-//     stages {
-//         stage('Checkout') {
-//             steps {
-//                 // Chỉ checkout code từ GitHub repository để kiểm tra kết nối
-//                 checkout scm
-//             }
-//         }
-//     }
-// }
