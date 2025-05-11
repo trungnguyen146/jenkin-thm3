@@ -12,8 +12,8 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'github-pat' // docker hub cred 
 
         // Stage_CredID
-        VPS_STAGING_CREDENTIALS_ID = 'your-vps-staging-ssh-credentials-id' 
-        VPS_STAGING_HOST = 'your-vps-staging-ip' 
+        VPS_STAGING_CREDENTIALS_ID = 'Stag_CredID' 
+        VPS_STAGING_HOST = '14.225.219.164' 
 
         // Prod_CredID
         VPS_PRODUCTION_CREDENTIALS_ID = 'your-vps-production-ssh-credentials-id' // Thay bằng ID SSH credential cho VPS Production
