@@ -83,7 +83,7 @@
   <h2>Sản phẩm nổi bật</h2>
 
   <div class="product">
-    <img src="images/astrox99.jpg" alt="Vợt Yonex Astrox 99 Pro">
+    <img src="images/axtrox99.jpg" alt="Vợt Yonex Astrox 99 Pro">
     <div class="product-info">
       <h3>Yonex Astrox 99 Pro</h3>
       <p>Vợt công thủ toàn diện, dành cho người chơi nâng cao. Thiết kế đẹp, màu sắc mạnh mẽ.</p>
@@ -92,7 +92,7 @@
   </div>
 
   <div class="product">
-    <img src="images/lining75.jpg" alt="Vợt Lining Turbo Charging 75">
+    <img src="images/turbo.jpg" alt="Vợt Lining Turbo Charging 75">
     <div class="product-info">
       <h3>Lining Turbo Charging 75</h3>
       <p>Vợt nhẹ, linh hoạt, phù hợp với người chơi yêu thích tốc độ và phản xạ nhanh.</p>
