@@ -103,7 +103,7 @@
 </main>
 
 <footer>
-  © 2025 Shop Vợt Cầu Lông | <a href="mailto:sales@shopvot.com">sales@shopvot.com</a>
+  © 2025 Shop Vợt Cầu Lông | <a href="mailto:sales@shopvot.com">heheh@gmail.com</a>
 </footer>
 
 </body>
