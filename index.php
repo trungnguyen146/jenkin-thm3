@@ -1,32 +1,42 @@
 <?php
-$greeting = "Hello, welcome to my simple PHP website!";
+  $title = "Trang chủ";
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple PHP Website</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 50px;
-            background-color: #f0f0f0;
-        }
-        h1 {
-            color: #333;
-        }
-        p {
-            font-size: 18px;
-            color: #666;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title><?php echo $title; ?></title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    header, footer {
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+    }
+    h1 {
+      color: #333;
+    }
+  </style>
 </head>
 <body>
-    <h1>Simple PHP Website</h1>
-    <p><?php echo $greeting; ?></p>
-    <p>This is a basic website built with PHP and HTML.</p>
+
+<header>
+  <h2><?php echo $title; ?></h2>
+</header>
+
+<main>
+  <h1>Chào mừng bạn đến với website!</h1>
+  <p>Đây là một ví dụ về một file PHP tĩnh đơn giản.</p>
+</main>
+
+<footer>
+  <p>© 2025 - Website PHP tĩnh</p>
+</footer>
+
 </body>
 </html>
