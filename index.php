@@ -39,6 +39,7 @@
       margin-bottom: 20px;
       overflow: hidden;
       display: flex;
+      flex-wrap: wrap;
     }
 
     .product img {
@@ -48,6 +49,7 @@
     }
 
     .product-info {
+      flex: 1;
       padding: 20px;
     }
 
@@ -81,19 +83,19 @@
   <h2>Sản phẩm nổi bật</h2>
 
   <div class="product">
-    <img src="https://cdn.shopvnb.com/uploads/sanpham/vot-cau-long/yonex-astrox-99-pro-orange.jpg" alt="Vợt Yonex Astrox 99 Pro">
+    <img src="images/astrox99.jpg" alt="Vợt Yonex Astrox 99 Pro">
     <div class="product-info">
       <h3>Yonex Astrox 99 Pro</h3>
-      <p>Vợt công thủ toàn diện, phù hợp cho người chơi nâng cao. Thiết kế màu cam nổi bật, công nghệ mới nhất từ Yonex.</p>
+      <p>Vợt công thủ toàn diện, dành cho người chơi nâng cao. Thiết kế đẹp, màu sắc mạnh mẽ.</p>
       <p><strong>Giá:</strong> 3.990.000₫</p>
     </div>
   </div>
 
   <div class="product">
-    <img src="https://cdn.shopvnb.com/uploads/sanpham/vot-cau-long/lining-turbo-charging.jpg" alt="Vợt Lining Turbo Charging">
+    <img src="images/lining75.jpg" alt="Vợt Lining Turbo Charging 75">
     <div class="product-info">
       <h3>Lining Turbo Charging 75</h3>
-      <p>Thích hợp cho người chơi thiên về tốc độ và tấn công. Độ bền cao, màu sắc hiện đại.</p>
+      <p>Vợt nhẹ, linh hoạt, phù hợp với người chơi yêu thích tốc độ và phản xạ nhanh.</p>
       <p><strong>Giá:</strong> 2.750.000₫</p>
     </div>
   </div>
