@@ -72,7 +72,7 @@
 </main>
 
 <footer>
-  © 2025 Đại học Hoa Sen. All rights reserved.
+  HSU - Thực hành mạng 3_1421_2433_CT2
 </footer>
 
 </body>
