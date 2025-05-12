@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Sao chép mã nguồn vào thư mục web của Apache
-COPY index.php /var/www/html/jenkin
+COPY index.php /var/www/html/
 
 # Cấu hình Apache để chạy trên port 80
 EXPOSE 80
