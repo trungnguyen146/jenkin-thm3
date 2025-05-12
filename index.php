@@ -1,5 +1,5 @@
 <?php
-  $title = "Đại học Hoa Sen - Trang chủ";
+  $title = "Shop Vợt Cầu Lông - Trang chủ";
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -8,71 +8,100 @@
   <title><?php echo $title; ?></title>
   <style>
     body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: "Segoe UI", sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f5f7fa;
+      background-color: #f0f4f8;
       color: #333;
     }
 
     header {
-      background-color: #003366;
+      background-color: #0275d8;
       color: white;
       padding: 20px;
       text-align: center;
     }
 
+    h1, h2 {
+      margin: 0;
+    }
+
     main {
       padding: 30px;
-      max-width: 800px;
+      max-width: 1000px;
       margin: auto;
     }
 
-    h1 {
-      color: #003366;
+    .product {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      overflow: hidden;
+      display: flex;
     }
 
-    .highlight {
-      color: #0073e6;
-      font-weight: bold;
+    .product img {
+      width: 300px;
+      height: auto;
+      object-fit: cover;
+    }
+
+    .product-info {
+      padding: 20px;
+    }
+
+    .product-info h3 {
+      margin-top: 0;
+      color: #0275d8;
     }
 
     footer {
-      background-color: #eaeaea;
+      background-color: #ddd;
       text-align: center;
       padding: 15px;
       font-size: 14px;
       color: #555;
+    }
+
+    a {
+      color: #0275d8;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Đại học Hoa Sen</h1>
-  <p>Nơi hội tụ trí tuệ và sáng tạo</p>
+  <h1>Shop Vợt Cầu Lông</h1>
+  <p>Chuyên cung cấp vợt chất lượng – chính hãng – giá tốt</p>
 </header>
 
 <main>
-  <h2>Giới thiệu</h2>
-  <p>Đại học Hoa Sen (HSU) là một trường đại học tư thục nổi bật tại TP.HCM, Việt Nam. Trường nổi tiếng với các chương trình đào tạo hiện đại, quốc tế hóa và môi trường học tập năng động.</p>
+  <h2>Sản phẩm nổi bật</h2>
 
-  <h2>Chương trình đào tạo</h2>
-  <ul>
-    <li><span class="highlight">Công nghệ thông tin</span></li>
-    <li><span class="highlight">Thiết kế đồ họa</span></li>
-    <li><span class="highlight">Quản trị kinh doanh</span></li>
-    <li><span class="highlight">Ngôn ngữ Anh</span></li>
-    <li><span class="highlight">Du lịch - Nhà hàng - Khách sạn</span></li>
-  </ul>
+  <div class="product">
+    <img src="https://cdn.shopvnb.com/uploads/sanpham/vot-cau-long/yonex-astrox-99-pro-orange.jpg" alt="Vợt Yonex Astrox 99 Pro">
+    <div class="product-info">
+      <h3>Yonex Astrox 99 Pro</h3>
+      <p>Vợt công thủ toàn diện, phù hợp cho người chơi nâng cao. Thiết kế màu cam nổi bật, công nghệ mới nhất từ Yonex.</p>
+      <p><strong>Giá:</strong> 3.990.000₫</p>
+    </div>
+  </div>
 
-  <h2>Liên hệ</h2>
-  <p>Website: <a href="https://www.hoasen.edu.vn" target="_blank">www.hoasen.edu.vn</a></p>
-  <p>Địa chỉ: 8 Nguyễn Văn Tráng, Q.1, TP.HCM</p>
+  <div class="product">
+    <img src="https://cdn.shopvnb.com/uploads/sanpham/vot-cau-long/lining-turbo-charging.jpg" alt="Vợt Lining Turbo Charging">
+    <div class="product-info">
+      <h3>Lining Turbo Charging 75</h3>
+      <p>Thích hợp cho người chơi thiên về tốc độ và tấn công. Độ bền cao, màu sắc hiện đại.</p>
+      <p><strong>Giá:</strong> 2.750.000₫</p>
+    </div>
+  </div>
+
 </main>
 
 <footer>
-  HSU - Thực hành mạng 3_1421_2433_CT2
+  © 2025 Shop Vợt Cầu Lông | <a href="mailto:sales@shopvot.com">sales@shopvot.com</a>
 </footer>
 
 </body>
