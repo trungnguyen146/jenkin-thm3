@@ -8,13 +8,14 @@ pipeline {
 
     environment {
         GITHUB_CREDENTIALS = 'github-jenkins'
-        DOCKER_CREDENTIALS = 'github-pat'
-        IMAGE_NAME = 'trungnguyen146/php-website:ver1'
+        DOCKERHUB_CREDENTIALS = credentials('github-pat') // Gọi credentials rõ ràng
+        IMAGE_NAME = 'trungnguyen146/php-website'
+        IMAGE_TAG = 'ver1'
+        FULL_IMAGE = "trungnguyen146/php-website:ver1"
     }
 
     triggers {
-        // Kích hoạt pipeline khi có thay đổi trên GitHub
-        pollSCM('H/2 * * * *') // Kiểm tra thay đổi mỗi 2 phút
+        pollSCM('H/2 * * * *')
     }
 
     stages {
@@ -24,31 +25,38 @@ pipeline {
             }
         }
 
-        stage('Setup Buildx') {
+        stage('Login to Docker Hub') {
             steps {
                 script {
+                    echo "🔐 Logging in to Docker Hub..."
                     sh '''
-                    if ! docker buildx version; then
-                        echo "buildx not found, attempting to install..."
-                        docker buildx install || echo "buildx install failed, proceeding with default build"
-                        docker buildx create --name mybuilder --use || echo "Failed to create builder, using default"
-                    fi
-                    docker buildx ls || echo "buildx ls failed"
+                        echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
                     '''
                 }
             }
         }
 
-        stage('Build and Push') {
+        stage('Setup Buildx') {
+            steps {
+                sh '''
+                    docker buildx create --use --name mybuilder || echo "Builder exists"
+                    docker buildx inspect --bootstrap || true
+                    docker buildx ls
+                '''
+            }
+        }
+
+        stage('Build and Push Image') {
             steps {
                 script {
-                    sh '''
-                    docker buildx build -t $IMAGE_NAME -f Dockerfile . --push || {
-                        echo "buildx failed, falling back to docker build and push"
-                        docker build -t $IMAGE_NAME -f Dockerfile .
-                        docker push $IMAGE_NAME
-                    }
-                    '''
+                    echo "🚧 Building and pushing image: ${FULL_IMAGE}"
+                    sh """
+                        docker buildx build -t ${FULL_IMAGE} -f Dockerfile . --push || {
+                            echo "⚠️ buildx failed, falling back to classic build"
+                            docker build -t ${FULL_IMAGE} -f Dockerfile .
+                            docker push ${FULL_IMAGE}
+                        }
+                    """
                 }
             }
         }
@@ -56,19 +64,19 @@ pipeline {
         stage('Deploy to Server') {
             steps {
                 script {
-                    // Đăng nhập Docker Hub để pull
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS}") {
-                        sh 'docker pull $IMAGE_NAME'
-                    }
+                    echo "🚀 Deploying container..."
 
-                    // Dừng và xóa container cũ (nếu có)
+                    // Pull image về (đã login từ trước)
+                    sh "docker pull ${FULL_IMAGE}"
+
+                    // Dừng và gỡ container cũ
                     sh '''
-                    docker stop php-container || true
-                    docker rm php-container || true
+                        docker stop php-container || true
+                        docker rm php-container || true
                     '''
 
-                    // Chạy container mới trên port 8888
-                    sh 'docker run -d --name php-container -p 8888:80 $IMAGE_NAME'
+                    // Chạy container mới
+                    sh "docker run -d --name php-container -p 8888:80 ${FULL_IMAGE}"
                 }
             }
         }
@@ -76,17 +84,18 @@ pipeline {
 
     post {
         always {
-            // Dọn dẹp sau khi pipeline hoàn tất
+            echo '🧹 Cleaning up...'
             sh 'docker system prune -f'
         }
         success {
-            echo 'Pipeline completed successfully! Website is running on port 8888.'
+            echo '✅ Deployment successful. Website running on port 8888.'
         }
         failure {
-            echo 'Pipeline failed! Check the logs for details.'
+            echo '❌ Pipeline failed. Check logs for more info.'
         }
     }
 }
+
 
 
 
