@@ -81,7 +81,7 @@ pipeline {
             }
         }
 
-stage('Test Production SSH Connection') {
+        stage('Test Production SSH Connection') {
             when {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
