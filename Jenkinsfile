@@ -99,7 +99,7 @@ pipeline {
                         echo "SSH_HOST: ${SSH_HOST}"
 
                         sh """
-                            ssh -o StrictHostKeyChecking=no -T \${SSH_USER}@\${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
