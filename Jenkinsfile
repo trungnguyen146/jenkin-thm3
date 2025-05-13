@@ -67,9 +67,9 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_STAGING_CREDENTIALS_ID}", host: "${VPS_STAGING_HOST}")]) {
                     script {
-                        echo "🚀 Deploying to Staging (${VPS_STAGING_HOST}:${HOST_PORT_STAGING})..."
+                        echo "🚀 Deploying to Staging (${env.VPS_STAGING_HOST}:${env.HOST_PORT_STAGING})..."
                         sh """
-                            ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST '
+                            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
                                 docker pull ${FULL_IMAGE}
                                 docker stop ${CONTAINER_NAME_STAGING} || true
                                 docker rm ${CONTAINER_NAME_STAGING} || true
