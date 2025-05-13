@@ -8,17 +8,28 @@ pipeline {
     }
 
     environment {
+        GITHUB_CREDENTIALS = 'github-jenkins'
+        DOCKERHUB_CREDENTIALS = credentials('github-pat') // Gọi credentials rõ ràng
+
+    }
+
+
+
+    environment {
         DOCKERHUB_USERNAME = 'trungnguyen146' 
         IMAGE_NAME_PREFIX = "${DOCKERHUB_USERNAME}/php-nginx-app"
         DOCKER_CREDENTIALS_ID = 'github-pat' // docker hub cred 
+        IMAGE_NAME = 'trungnguyen146/php-website'
+        IMAGE_TAG = 'ver1'
+        FULL_IMAGE = "trungnguyen146/php-website:ver1"
 
         // Stage_CredID
         VPS_STAGING_CREDENTIALS_ID = 'Stag_CredID' 
         VPS_STAGING_HOST = '14.225.219.164' 
 
         // Prod_CredID
-        VPS_PRODUCTION_CREDENTIALS_ID = 'your-vps-production-ssh-credentials-id' // Thay bằng ID SSH credential cho VPS Production
-        VPS_PRODUCTION_HOST = 'your-vps-production-ip' 
+        VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID' // Thay bằng ID SSH credential cho VPS Production
+        VPS_PRODUCTION_HOST = '14.225.219.14' 
         
         // Name
         CONTAINER_NAME_STAGING = 'php-nginx-staging'
@@ -30,6 +41,10 @@ pipeline {
         HOST_PORT_PRODUCTION = 80 
     }
 
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+    
     stages {
         stage('Checkout') {
             steps {
