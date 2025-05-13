@@ -60,7 +60,7 @@ pipeline {
             }
         }
 
-        stage('Deploy to Staging ') {
+        stage('Deploy to Staging (Local)') {
             steps {
                 script {
                     echo "🚀 Deploying container to Staging (Local)..."
@@ -81,11 +81,26 @@ pipeline {
             }
         }
 
-        stage('Deploy to Production') {
+        stage('Test Production SSH Connection') {
             when {
-                input message: 'Proceed with deployment to Production?'
+                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
+                    script {
+                        echo "🩺 Testing SSH connection to Production (${VPS_PRODUCTION_HOST})..."
+                        sh "ssh -o StrictHostKeyChecking=no -T $SSH_USER@$SSH_HOST -p 22 -o ConnectTimeout=10 'echo Connected successfully'"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                input message: 'Proceed with deployment to Production?'
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
                     script {
                         echo "🚀 Deploying to Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
