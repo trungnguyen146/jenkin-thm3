@@ -88,7 +88,7 @@ pipeline {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", keyFileVariable: 'SSH_PRIVATE_KEY_FILE', usernameVariable: 'SSH_USER')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
                     script {
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
@@ -96,7 +96,12 @@ pipeline {
                         echo "SSH_USER: ${SSH_USER}"
 
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i "\$SSH_PRIVATE_KEY_FILE" -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            ssh-agent -a /tmp/ssh-agent
+                            chmod 700 /tmp
+                            chmod 700 /tmp/ssh-agent
+                            eval \$(ssh-agent -s)
+                            ssh-add "\$SSH_PRIVATE_KEY" # Thử dùng biến này nếu có
+                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
