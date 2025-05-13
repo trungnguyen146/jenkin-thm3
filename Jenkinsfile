@@ -77,51 +77,46 @@ pipeline {
             }
         }
 
-        stage('Approve Production Deployment') {
-            steps {
-                input message: 'Approve deployment to Production?'
-            }
+    stage('Test Production SSH Connection') {
+        when {
+            expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
         }
-
-        stage('Test Production SSH Connection') {
-            when {
-                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
-                    script {
-                        def SSH_USER = "${sshUser}"
-                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
-                        echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
-                        """
-                    }
+        steps {
+            withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
+                script {
+                    def SSH_USER = "${sshUser}"
+                    def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+                    echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+                    // Sử dụng String interpolation đúng cách với dấu ngoặc kép trong Groovy
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                    """
                 }
             }
         }
+    }
 
-        stage('Deploy to Production') {
-            when {
-                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                input message: 'Proceed with deployment to Production?'
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
-                    script {
-                        def SSH_USER = "${sshUser}"
-                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
-                        echo "🚀 Deploying to Production (${SSH_HOST}:${HOST_PORT_PRODUCTION})..."
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
-                                docker pull ${FULL_IMAGE}
-                                docker stop ${CONTAINER_NAME_PRODUCTION} || true
-                                docker rm ${CONTAINER_NAME_PRODUCTION} || true
-                                docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
-                                echo "✅ Deployed to Production"
-                            '
-                        """
-                    }
+
+    stage('Deploy to Production') {
+        when {
+            expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+        }
+        steps {
+            input message: 'Proceed with deployment to Production?'
+            withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
+                script {
+                    def SSH_USER = "${sshUser}"
+                    def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+                    echo "🚀 Deploying to Production (${SSH_HOST}:${HOST_PORT_PRODUCTION})..."
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
+                            docker pull ${FULL_IMAGE}
+                            docker stop ${CONTAINER_NAME_PRODUCTION} || true
+                            docker rm ${CONTAINER_NAME_PRODUCTION} || true
+                            docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
+                            echo "✅ Deployed to Production"
+                        '
+                    """
                 }
             }
         }
