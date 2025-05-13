@@ -89,9 +89,9 @@ pipeline {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
+                withCredentials([string(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", variable: 'SSH_PRIVATE_KEY')]) {
                     script {
-                        def SSH_USER = "${sshUser}"
+                        def SSH_USER = "root'
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
@@ -99,7 +99,10 @@ pipeline {
                         echo "SSH_HOST: ${SSH_HOST}"
 
                         sh """
+                            echo "$SSH_PRIVATE_KEY" > id_rsa
+                            chmod 400 id_rsa
                             ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            rm -f id_rsa
                         """
                     }
                 }
