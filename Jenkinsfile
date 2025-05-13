@@ -13,18 +13,15 @@ pipeline {
         FULL_IMAGE = "${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDENTIALS = credentials('github-pat') // ID Docker Hub credential
 
-        // Staging VPS
-        VPS_STAGING_CREDENTIALS_ID = 'Stag_CredID'
-        VPS_STAGING_HOST = '14.225.219.164'
-        CONTAINER_NAME_STAGING = 'php-container-staging' // Tên container staging khác
+        // Staging (Local - Same as Jenkins)
+        CONTAINER_NAME_STAGING_LOCAL = 'php-container-staging'
+        HOST_PORT_STAGING_LOCAL = 8888
+        APPLICATION_PORT = 80
 
         // Production VPS
         VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID'
         VPS_PRODUCTION_HOST = '14.225.219.14'
-        CONTAINER_NAME_PRODUCTION = 'php-container-prod' // Tên container production
-
-        APPLICATION_PORT = 80
-        HOST_PORT_STAGING = 8888
+        CONTAINER_NAME_PRODUCTION = 'php-container-prod'
         HOST_PORT_PRODUCTION = 80
     }
 
@@ -63,21 +60,17 @@ pipeline {
             }
         }
 
-        stage('Deploy to Staging') {
+        stage('Deploy to Staging ') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_STAGING_CREDENTIALS_ID}")]) {
-                    script {
-                        echo "🚀 Deploying to Staging (${env.VPS_STAGING_HOST}:${env.HOST_PORT_STAGING})..."
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${sshUser}@${VPS_STAGING_HOST} '
-                                docker pull ${FULL_IMAGE}
-                                docker stop ${CONTAINER_NAME_STAGING} || true
-                                docker rm ${CONTAINER_NAME_STAGING} || true
-                                docker run -d --name ${CONTAINER_NAME_STAGING} -p ${HOST_PORT_STAGING}:${APPLICATION_PORT} ${FULL_IMAGE}
-                                echo "✅ Deployed to Staging"
-                            '
-                        """
-                    }
+                script {
+                    echo "🚀 Deploying container to Staging (Local)..."
+                    sh "docker pull ${FULL_IMAGE}"
+                    sh """
+                        docker stop ${CONTAINER_NAME_STAGING_LOCAL} || true
+                        docker rm ${CONTAINER_NAME_STAGING_LOCAL} || true
+                    """
+                    sh "docker run -d --name ${CONTAINER_NAME_STAGING_LOCAL} -p ${HOST_PORT_STAGING_LOCAL}:${APPLICATION_PORT} ${FULL_IMAGE}"
+                    echo "✅ Deployed to Staging (Local) on port ${HOST_PORT_STAGING_LOCAL}"
                 }
             }
         }
@@ -90,10 +83,9 @@ pipeline {
 
         stage('Deploy to Production') {
             when {
-                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' } // Chỉ chạy nếu build không thất bại
+                input message: 'Proceed with deployment to Production?'
             }
             steps {
-                input message: 'Proceed with deployment to Production?'
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
                     script {
                         echo "🚀 Deploying to Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
