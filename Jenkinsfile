@@ -19,7 +19,7 @@ pipeline {
         APPLICATION_PORT = 80
 
         // Production VPS
-        VPS_PRODUCTION_CREDENTIALS_ID = credentials('Prod_CredID')
+        VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID'
         VPS_PRODUCTION_HOST = '14.225.219.14'
         CONTAINER_NAME_PRODUCTION = 'php-container-prod'
         HOST_PORT_PRODUCTION = 80
@@ -107,32 +107,32 @@ pipeline {
         }
 
 
-        stage('Deploy to Production') {
-            when {
-                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                input message: 'Proceed with deployment to Production?'
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
-                    script {
-                        def SSH_USER = sshUser
-                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
-                        echo "🚀 Deploying to Production (${SSH_HOST}:${HOST_PORT_PRODUCTION})..."
-                        sh """
-                            ssh -o StrictHostKeyChecking=no \${SSH_USER}@\${SSH_HOST} '
-                                docker pull ${FULL_IMAGE}
-                                docker stop \${CONTAINER_NAME_PRODUCTION} || true
-                                docker rm \${CONTAINER_NAME_PRODUCTION} || true
-                                docker run -d --name \${CONTAINER_NAME_PRODUCTION} -p \${HOST_PORT_PRODUCTION}:\${APPLICATION_PORT} ${FULL_IMAGE}
-                                echo "✅ Deployed to Production"
-                            '
-                        """
-                    }
-                }
-            }
-        }
+    //     stage('Deploy to Production') {
+    //         when {
+    //             expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+    //         }
+    //         steps {
+    //             input message: 'Proceed with deployment to Production?'
+    //             withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
+    //                 script {
+    //                     def SSH_USER = sshUser
+    //                     def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+    //                     echo "🚀 Deploying to Production (${SSH_HOST}:${HOST_PORT_PRODUCTION})..."
+    //                     sh """
+    //                         ssh -o StrictHostKeyChecking=no \${SSH_USER}@\${SSH_HOST} '
+    //                             docker pull ${FULL_IMAGE}
+    //                             docker stop \${CONTAINER_NAME_PRODUCTION} || true
+    //                             docker rm \${CONTAINER_NAME_PRODUCTION} || true
+    //                             docker run -d --name \${CONTAINER_NAME_PRODUCTION} -p \${HOST_PORT_PRODUCTION}:\${APPLICATION_PORT} ${FULL_IMAGE}
+    //                             echo "✅ Deployed to Production"
+    //                         '
+    //                     """
+    //                 }
+    //             }
+    //         }
+    //     }
 
-    }
+    // }
 
     post {
         always {
