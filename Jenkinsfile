@@ -15,7 +15,7 @@ pipeline {
 
         // Staging (Local - Same as Jenkins)
         CONTAINER_NAME_STAGING_LOCAL = 'php-container-staging'
-        HOST_PORT_STAGING_LOCAL = 8888
+        HOST_PORT_STAGING_LOCAL = 8800
         APPLICATION_PORT = 80
 
         // Production VPS
