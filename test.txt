@@ -1,0 +1,99 @@
+// Jenkinfile đã chạy ổn ở bước tự động deploy ở staging vps 
+
+pipeline {
+    agent {
+        docker {
+            image 'docker:dind'
+            args '-v /var/run/docker.sock:/var/run/docker.sock --privileged'
+        }
+    }
+
+    environment {
+        GITHUB_CREDENTIALS = 'github-jenkins'
+        DOCKERHUB_CREDENTIALS = credentials('github-pat') // Gọi credentials rõ ràng
+        IMAGE_NAME = 'trungnguyen146/php-website'
+        IMAGE_TAG = 'ver1'
+        FULL_IMAGE = "trungnguyen146/php-website:ver1"
+    }
+
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    echo "🔐 Logging in to Docker Hub..."
+                    sh '''
+                        echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Setup Buildx') {
+            steps {
+                sh '''
+                    docker buildx create --use --name mybuilder || echo "Builder exists"
+                    docker buildx inspect --bootstrap || true
+                    docker buildx ls
+                '''
+            }
+        }
+
+        stage('Build and Push Image') {
+            steps {
+                script {
+                    echo "🚧 Building and pushing image: ${FULL_IMAGE}"
+                    sh """
+                        docker buildx build -t ${FULL_IMAGE} -f Dockerfile . --push || {
+                            echo "⚠️ buildx failed, falling back to classic build"
+                            docker build -t ${FULL_IMAGE} -f Dockerfile .
+                            docker push ${FULL_IMAGE}
+                        }
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Server') {
+            steps {
+                script {
+                    echo "🚀 Deploying container..."
+
+                    // Pull image về (đã login từ trước)
+                    sh "docker pull ${FULL_IMAGE}"
+
+                    // Dừng và gỡ container cũ
+                    sh '''
+                        docker stop php-container || true
+                        docker rm php-container || true
+                    '''
+
+                    // Chạy container mới
+                    sh "docker run -d --name php-container -p 8888:80 ${FULL_IMAGE}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '🧹 Cleaning up...'
+            sh 'docker system prune -f'
+        }
+        success {
+            echo '✅ Deployment successful. Website running on port 8888.'
+        }
+        failure {
+            echo '❌ Pipeline failed. Check logs for more info.'
+        }
+    }
+}
