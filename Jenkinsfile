@@ -81,15 +81,17 @@ pipeline {
             }
         }
 
-        stage('Test Production SSH Connection') {
+stage('Test Production SSH Connection') {
             when {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
                     script {
-                        echo "🩺 Testing SSH connection to Production (${VPS_PRODUCTION_HOST})..."
-                        sh "ssh -o StrictHostKeyChecking=no -T $SSH_USER@$SSH_HOST -p 22 -o ConnectTimeout=10 'echo Connected successfully'"
+                        def SSH_USER = "${sshUser}"
+                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+                        echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+                        sh "ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'"
                     }
                 }
             }
@@ -101,11 +103,13 @@ pipeline {
             }
             steps {
                 input message: 'Proceed with deployment to Production?'
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
                     script {
-                        echo "🚀 Deploying to Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
+                        def SSH_USER = "${sshUser}"
+                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+                        echo "🚀 Deploying to Production (${SSH_HOST}:${HOST_PORT_PRODUCTION})..."
                         sh """
-                            ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST '
+                            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
                                 docker pull ${FULL_IMAGE}
                                 docker stop ${CONTAINER_NAME_PRODUCTION} || true
                                 docker rm ${CONTAINER_NAME_PRODUCTION} || true
@@ -117,7 +121,6 @@ pipeline {
                 }
             }
         }
-    }
 
     post {
         always {
