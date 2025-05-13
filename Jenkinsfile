@@ -1,4 +1,3 @@
-//test5
 pipeline {
     agent {
         docker {
@@ -91,9 +90,10 @@ pipeline {
 
         stage('Deploy to Production') {
             when {
-                input message: 'Proceed with deployment to Production?'
+                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' } // Chỉ chạy nếu build không thất bại
             }
             steps {
+                input message: 'Proceed with deployment to Production?'
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
                     script {
                         echo "🚀 Deploying to Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
