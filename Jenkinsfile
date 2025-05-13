@@ -91,7 +91,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", variable: 'SSH_PRIVATE_KEY')]) {
                     script {
-                        def SSH_USER = "root'
+                        def SSH_USER = 'root'
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
