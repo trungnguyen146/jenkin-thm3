@@ -77,11 +77,11 @@ pipeline {
             }
         }
 
-        stage('Approve Production Deployment') {
-            steps {
-                input message: 'Approve deployment to Production?'
-            }
-        }
+        // stage('Approve Production Deployment') {
+        //     steps {
+        //         input message: 'Approve deployment to Production?'
+        //     }
+        // }
 
 
         stage('Test Production SSH Connection') {
