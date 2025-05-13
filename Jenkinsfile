@@ -83,57 +83,55 @@ pipeline {
         //     }
         // }
 
-          stage('Test Production SSH Connection') {
-            when {
-                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
-                    script {
-                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
-
-                        echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
-                        echo "SSH_USER: ${SSH_USER}"
-
-                        sh """
-                            ssh-agent -a /tmp/ssh-agent
-                            chmod 700 /tmp
-                            chmod 700 /tmp/ssh-agent
-                            eval \$(ssh-agent -s)
-                            ssh-add "\$SSH_PRIVATE_KEY" # Thử dùng biến này nếu có
-                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
-                        """
-                    }
-                }
-            }
-        }
-        
-
-        // Test
-        // stage('Test Production SSH Connection') {
+        //   stage('Test Production SSH Connection') {
         //     when {
         //         expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
         //     }
         //     steps {
-        //         withCredentials([(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", variable: 'SSH_PRIVATE_KEY')]) {
+        //         withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
         //             script {
-        //                 def SSH_USER = 'root'
         //                 def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
         //                 echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
         //                 echo "SSH_USER: ${SSH_USER}"
-        //                 echo "SSH_HOST: ${SSH_HOST}"
 
         //                 sh """
-        //                     echo "$SSH_PRIVATE_KEY" > id_rsa
-        //                     chmod 400 id_rsa
-        //                     ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
-        //                     rm -f id_rsa
+        //                     ssh-agent -a /tmp/ssh-agent
+        //                     chmod 700 /tmp
+        //                     chmod 700 /tmp/ssh-agent
+        //                     eval \$(ssh-agent -s)
+        //                     ssh-add "\$SSH_PRIVATE_KEY" # Thử dùng biến này nếu có
+        //                     ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
         //                 """
         //             }
         //         }
         //     }
         // }
+        
+
+        // Test
+         stage('Test Production SSH Connection') {
+             when {
+                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+             }
+             steps {
+                  withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
+                     script {
+                           def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+
+                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+                         echo "SSH_USER: ${SSH_USER}"
+                         echo "SSH_HOST: ${SSH_HOST}"
+
+                         sh """
+                           
+                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                             
+                         """
+                    }
+                 }
+            }
+         }
 
 
     //     stage('Deploy to Production') {
