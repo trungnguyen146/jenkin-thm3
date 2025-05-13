@@ -83,21 +83,20 @@ pipeline {
         //     }
         // }
 
-        stage('Test Production SSH Connection') {
+          stage('Test Production SSH Connection') {
             when {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", keyFileVariable: 'SSH_PRIVATE_KEY_FILE', usernameVariable: 'SSH_USER', hostVariable: 'SSH_HOST_DIRECT')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", keyFileVariable: 'SSH_PRIVATE_KEY_FILE', usernameVariable: 'SSH_USER')]) {
                     script {
-                        def SSH_HOST = "${VPS_PRODUCTION_HOST}" 
+                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
                         echo "SSH_USER: ${SSH_USER}"
-                        echo "SSH_HOST (from env): ${env.SSH_HOST_DIRECT}"
 
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i "\$SSH_PRIVATE_KEY_FILE" -T "\$SSH_USER@${VPS_PRODUCTION_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            ssh -o StrictHostKeyChecking=no -i "\$SSH_PRIVATE_KEY_FILE" -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
