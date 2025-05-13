@@ -26,7 +26,7 @@ pipeline {
     }
 
     triggers {
-        pollSCM('H/2 * * * *') 
+        pollSCM('H/2 * * * *')
     }
 
     stages {
@@ -41,7 +41,7 @@ pipeline {
                 script {
                     echo "🔐 Logging in to Docker Hub..."
                     sh """
-                        echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
+                        echo "\${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "\${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
                     """
                 }
             }
@@ -52,10 +52,10 @@ pipeline {
                 script {
                     echo "🚧 Building and pushing image: ${FULL_IMAGE}"
                     sh """
-                        docker buildx build -t ${FULL_IMAGE} -f Dockerfile . --push || {
+                        docker buildx build -t \${FULL_IMAGE} -f Dockerfile . --push || {
                             echo "⚠️ buildx failed, falling back to classic build"
-                            docker build -t ${FULL_IMAGE} -f Dockerfile .
-                            docker push ${FULL_IMAGE}
+                            docker build -t \${FULL_IMAGE} -f Dockerfile .
+                            docker push \${FULL_IMAGE}
                         }
                     """
                 }
@@ -68,14 +68,21 @@ pipeline {
                     echo "🚀 Deploying container to Staging (Local)..."
                     sh "docker pull ${FULL_IMAGE}"
                     sh """
-                        docker stop ${CONTAINER_NAME_STAGING_LOCAL} || true
-                        docker rm ${CONTAINER_NAME_STAGING_LOCAL} || true
+                        docker stop \${CONTAINER_NAME_STAGING_LOCAL} || true
+                        docker rm \${CONTAINER_NAME_STAGING_LOCAL} || true
                     """
-                    sh "docker run -d --name ${CONTAINER_NAME_STAGING_LOCAL} -p ${HOST_PORT_STAGING_LOCAL}:${APPLICATION_PORT} ${FULL_IMAGE}"
+                    sh "docker run -d --name \${CONTAINER_NAME_STAGING_LOCAL} -p \${HOST_PORT_STAGING_LOCAL}:\${APPLICATION_PORT} ${FULL_IMAGE}"
                     echo "✅ Deployed to Staging (Local) on port ${HOST_PORT_STAGING_LOCAL}"
                 }
             }
         }
+
+        stage('Approve Production Deployment') {
+            steps {
+                input message: 'Approve deployment to Production?'
+            }
+        }
+
 
         stage('Test Production SSH Connection') {
             when {
@@ -86,14 +93,19 @@ pipeline {
                     script {
                         def SSH_USER = "${sshUser}"
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+
                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+                        echo "SSH_USER: ${SSH_USER}"
+                        echo "SSH_HOST: ${SSH_HOST}"
+
                         sh """
-                            ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            ssh -o StrictHostKeyChecking=no -T \${SSH_USER}@\${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
             }
         }
+
 
         stage('Deploy to Production') {
             when {
@@ -107,11 +119,11 @@ pipeline {
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
                         echo "🚀 Deploying to Production (${SSH_HOST}:${HOST_PORT_PRODUCTION})..."
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
+                            ssh -o StrictHostKeyChecking=no \${SSH_USER}@\${SSH_HOST} '
                                 docker pull ${FULL_IMAGE}
-                                docker stop ${CONTAINER_NAME_PRODUCTION} || true
-                                docker rm ${CONTAINER_NAME_PRODUCTION} || true
-                                docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
+                                docker stop \${CONTAINER_NAME_PRODUCTION} || true
+                                docker rm \${CONTAINER_NAME_PRODUCTION} || true
+                                docker run -d --name \${CONTAINER_NAME_PRODUCTION} -p \${HOST_PORT_PRODUCTION}:\${APPLICATION_PORT} ${FULL_IMAGE}
                                 echo "✅ Deployed to Production"
                             '
                         """
