@@ -1,4 +1,4 @@
-//TEST 5
+//test5
 pipeline {
     agent {
         docker {
@@ -8,43 +8,31 @@ pipeline {
     }
 
     environment {
-        GITHUB_CREDENTIALS = 'github-jenkins'
-        DOCKERHUB_CREDENTIALS = credentials('github-pat') // Gọi credentials rõ ràng
-
-    }
-
-
-
-    environment {
-        DOCKERHUB_USERNAME = 'trungnguyen146' 
-        IMAGE_NAME_PREFIX = "${DOCKERHUB_USERNAME}/php-nginx-app"
-        DOCKER_CREDENTIALS_ID = 'github-pat' // docker hub cred 
+        DOCKERHUB_USERNAME = 'trungnguyen146'
         IMAGE_NAME = 'trungnguyen146/php-website'
         IMAGE_TAG = 'ver1'
-        FULL_IMAGE = "trungnguyen146/php-website:ver1"
+        FULL_IMAGE = "${IMAGE_NAME}:${IMAGE_TAG}"
+        DOCKERHUB_CREDENTIALS = credentials('github-pat') // ID Docker Hub credential
 
-        // Stage_CredID
-        VPS_STAGING_CREDENTIALS_ID = 'Stag_CredID' 
-        VPS_STAGING_HOST = '14.225.219.164' 
+        // Staging VPS
+        VPS_STAGING_CREDENTIALS_ID = 'Stag_CredID'
+        VPS_STAGING_HOST = '14.225.219.164'
+        CONTAINER_NAME_STAGING = 'php-container-staging' // Tên container staging khác
 
-        // Prod_CredID
-        VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID' // Thay bằng ID SSH credential cho VPS Production
-        VPS_PRODUCTION_HOST = '14.225.219.14' 
-        
-        // Name
-        CONTAINER_NAME_STAGING = 'php-nginx-staging'
-        CONTAINER_NAME_PRODUCTION = 'php-nginx-prod'
+        // Production VPS
+        VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID'
+        VPS_PRODUCTION_HOST = '14.225.219.14'
+        CONTAINER_NAME_PRODUCTION = 'php-container-prod' // Tên container production
 
-        //Port 
-        APPLICATION_PORT = 80 
-        HOST_PORT_STAGING = 8888 
-        HOST_PORT_PRODUCTION = 80 
+        APPLICATION_PORT = 80
+        HOST_PORT_STAGING = 8888
+        HOST_PORT_PRODUCTION = 80
     }
 
     triggers {
         pollSCM('H/2 * * * *')
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -52,25 +40,26 @@ pipeline {
             }
         }
 
-        stage('Set Build Version') {
+        stage('Login to Docker Hub') {
             steps {
                 script {
-                    // Lấy số build Jenkins làm một phần của version
-                    BUILD_VERSION = "1.0.${BUILD_NUMBER}"
-                    DOCKER_IMAGE_TAGGED = "${env.IMAGE_NAME_PREFIX}:${BUILD_VERSION}"
-                    echo "Building Docker image with tag: ${DOCKER_IMAGE_TAGGED}"
+                    echo "🔐 Logging in to Docker Hub..."
+                    sh "echo \"${DOCKERHUB_CREDENTIALS_PSW}\" | docker login -u \"${DOCKERHUB_CREDENTIALS_USR}\" --password-stdin"
                 }
             }
         }
 
-        stage('Build and Push Docker Image') {
+        stage('Build and Push Image') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE_TAGGED} -f Dockerfile ."
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS_ID}") {
-                        docker.image("${DOCKER_IMAGE_TAGGED}").push()
-                        echo "Pushed ${DOCKER_IMAGE_TAGGED} to Docker Hub"
-                    }
+                    echo "🚧 Building and pushing image: ${FULL_IMAGE}"
+                    sh """
+                        docker buildx build -t ${FULL_IMAGE} -f Dockerfile . --push || {
+                            echo "⚠️ buildx failed, falling back to classic build"
+                            docker build -t ${FULL_IMAGE} -f Dockerfile .
+                            docker push ${FULL_IMAGE}
+                        }
+                    """
                 }
             }
         }
@@ -79,14 +68,14 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_STAGING_CREDENTIALS_ID}", host: "${VPS_STAGING_HOST}")]) {
                     script {
-                        echo "Deploying ${DOCKER_IMAGE_TAGGED} to VPS Staging (${VPS_STAGING_HOST}:${HOST_PORT_STAGING})..."
+                        echo "🚀 Deploying to Staging (${VPS_STAGING_HOST}:${HOST_PORT_STAGING})..."
                         sh """
                             ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST '
-                                docker pull ${DOCKER_IMAGE_TAGGED}
+                                docker pull ${FULL_IMAGE}
                                 docker stop ${CONTAINER_NAME_STAGING} || true
                                 docker rm ${CONTAINER_NAME_STAGING} || true
-                                docker run -d --name ${CONTAINER_NAME_STAGING} -p ${HOST_PORT_STAGING}:${APPLICATION_PORT} ${DOCKER_IMAGE_TAGGED}
-                                echo "Deployment to Staging complete."
+                                docker run -d --name ${CONTAINER_NAME_STAGING} -p ${HOST_PORT_STAGING}:${APPLICATION_PORT} ${FULL_IMAGE}
+                                echo "✅ Deployed to Staging"
                             '
                         """
                     }
@@ -94,36 +83,45 @@ pipeline {
             }
         }
 
-        stage('Kiểm thử Staging (Manual)') {
+        stage('Approve Production Deployment') {
             steps {
-                input message: 'Approve to proceed to Production after testing Staging?'
-                script {
-                    echo 'Please perform testing on the Staging environment now.'
-                    echo "Application should be available at http://${env.VPS_STAGING_HOST}:${env.HOST_PORT_STAGING}"
-                }
+                input message: 'Approve deployment to Production?'
             }
         }
 
         stage('Deploy to Production') {
             when {
-                input message: 'Approve deployment to Production?'
+                input message: 'Proceed with deployment to Production?'
             }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", host: "${VPS_PRODUCTION_HOST}")]) {
                     script {
-                        echo "Deploying ${DOCKER_IMAGE_TAGGED} to VPS Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
+                        echo "🚀 Deploying to Production (${VPS_PRODUCTION_HOST}:${HOST_PORT_PRODUCTION})..."
                         sh """
                             ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST '
-                                docker pull ${DOCKER_IMAGE_TAGGED}
+                                docker pull ${FULL_IMAGE}
                                 docker stop ${CONTAINER_NAME_PRODUCTION} || true
                                 docker rm ${CONTAINER_NAME_PRODUCTION} || true
-                                docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${DOCKER_IMAGE_TAGGED}
-                                echo "Deployment to Production complete."
+                                docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
+                                echo "✅ Deployed to Production"
                             '
                         """
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo '🧹 Cleaning up...'
+            sh 'docker system prune -f'
+        }
+        success {
+            echo "🎉 Pipeline finished successfully!"
+        }
+        failure {
+            echo "💔 Pipeline failed. Check logs."
         }
     }
 }
