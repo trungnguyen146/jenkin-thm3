@@ -26,7 +26,7 @@ pipeline {
     }
 
     triggers {
-        pollSCM('H/2 * * * *')
+        pollSCM('H/2 * * * *') 
     }
 
     stages {
@@ -40,7 +40,9 @@ pipeline {
             steps {
                 script {
                     echo "🔐 Logging in to Docker Hub..."
-                    sh "echo \"${DOCKERHUB_CREDENTIALS_PSW}\" | docker login -u \"${DOCKERHUB_CREDENTIALS_USR}\" --password-stdin"
+                    sh """
+                        echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
+                    """
                 }
             }
         }
@@ -91,7 +93,9 @@ pipeline {
                         def SSH_USER = "${sshUser}"
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
-                        sh "ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'"
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                        """
                     }
                 }
             }
@@ -121,6 +125,7 @@ pipeline {
                 }
             }
         }
+    }
 
     post {
         always {
