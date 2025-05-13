@@ -66,12 +66,14 @@ pipeline {
         stage('Deploy to Staging') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_STAGING_CREDENTIALS_ID}")]) {
+                    environment {
+                        SSH_USER = "${sshUser}"
+                        SSH_HOST = "${VPS_STAGING_HOST}"
+                    }
                     script {
-                        def SSH_USER = "${sshUser}"
-                        def SSH_HOST = "${VPS_STAGING_HOST}"
-                        echo "🚀 Deploying to Staging (${SSH_HOST}:${env.HOST_PORT_STAGING})..."
+                        echo "🚀 Deploying to Staging (${env.SSH_HOST}:${env.HOST_PORT_STAGING})..."
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
+                            ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.SSH_HOST} '
                                 docker pull ${FULL_IMAGE}
                                 docker stop ${CONTAINER_NAME_STAGING} || true
                                 docker rm ${CONTAINER_NAME_STAGING} || true
