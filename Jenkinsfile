@@ -83,31 +83,53 @@ pipeline {
         //     }
         // }
 
-
         stage('Test Production SSH Connection') {
             when {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([string(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", variable: 'SSH_PRIVATE_KEY')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", keyFileVariable: 'SSH_PRIVATE_KEY_FILE', usernameVariable: 'SSH_USER', hostVariable: 'SSH_HOST_DIRECT')]) {
                     script {
-                        def SSH_USER = 'root'
-                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+                        def SSH_HOST = "${VPS_PRODUCTION_HOST}" 
 
                         echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
                         echo "SSH_USER: ${SSH_USER}"
-                        echo "SSH_HOST: ${SSH_HOST}"
+                        echo "SSH_HOST (from env): ${env.SSH_HOST_DIRECT}"
 
                         sh """
-                            echo "$SSH_PRIVATE_KEY" > id_rsa
-                            chmod 400 id_rsa
-                            ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
-                            rm -f id_rsa
+                            ssh -o StrictHostKeyChecking=no -i "\$SSH_PRIVATE_KEY_FILE" -T "\$SSH_USER@${VPS_PRODUCTION_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
             }
         }
+        
+
+        // Test
+        // stage('Test Production SSH Connection') {
+        //     when {
+        //         expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+        //     }
+        //     steps {
+        //         withCredentials([(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", variable: 'SSH_PRIVATE_KEY')]) {
+        //             script {
+        //                 def SSH_USER = 'root'
+        //                 def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+
+        //                 echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+        //                 echo "SSH_USER: ${SSH_USER}"
+        //                 echo "SSH_HOST: ${SSH_HOST}"
+
+        //                 sh """
+        //                     echo "$SSH_PRIVATE_KEY" > id_rsa
+        //                     chmod 400 id_rsa
+        //                     ssh -o StrictHostKeyChecking=no -T ${SSH_USER}@${SSH_HOST} -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+        //                     rm -f id_rsa
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
 
 
     //     stage('Deploy to Production') {
