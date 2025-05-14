@@ -62,17 +62,22 @@ pipeline {
             }
         }
 
-        stage('Deploy to Staging (Local)') {
+        stage('Test Production SSH Connection') {
+            when {
+                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
             steps {
-                script {
-                    echo "🚀 Deploying container to Staging (Local)..."
-                    sh "docker pull ${FULL_IMAGE}"
-                    sh """
-                        docker stop \${CONTAINER_NAME_STAGING_LOCAL} || true
-                        docker rm \${CONTAINER_NAME_STAGING_LOCAL} || true
-                    """
-                    sh "docker run -d --name \${CONTAINER_NAME_STAGING_LOCAL} -p \${HOST_PORT_STAGING_LOCAL}:\${APPLICATION_PORT} ${FULL_IMAGE}"
-                    echo "✅ Deployed to Staging (Local) on port ${HOST_PORT_STAGING_LOCAL}"
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
+                    script {
+                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+
+                        echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+                        echo "SSH_USER: ${SSH_USER}"
+
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                        """
+                    }
                 }
             }
         }
@@ -104,12 +109,12 @@ pipeline {
         // }
 
 
-        stage('Test Production SSH Connection') {
+          stage('Test Production SSH Connection') {
             when {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: Prod_CredID, usernameVariable: 'SSH_USER')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
                     script {
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
