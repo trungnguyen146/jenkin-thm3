@@ -19,7 +19,7 @@ pipeline {
         APPLICATION_PORT = 80
 
         // Production VPS
-        VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID'
+        VPS_PRODUCTION_CREDENTIALS_ID = credentials('Prod_CredID')
         VPS_PRODUCTION_HOST = '14.225.219.14'
         CONTAINER_NAME_PRODUCTION = 'php-container-prod'
         HOST_PORT_PRODUCTION = 80
