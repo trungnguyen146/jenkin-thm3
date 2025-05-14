@@ -83,15 +83,21 @@ pipeline {
         //     }
         // }
 
-        stage('Test Production SSH Connection') {
+          stage('Test Production SSH Connection') {
             when {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}")]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'Prod_CredID', usernameVariable: 'SSH_USER')]) {
                     script {
-                        echo "🩺 Testing SSH connection to Production (${VPS_PRODUCTION_HOST})..."
-                        sh 'echo "Testing credentials"'
+                        def SSH_HOST = "${VPS_PRODUCTION_HOST}"
+
+                        echo "🩺 Testing SSH connection to Production (${SSH_HOST})..."
+                        echo "SSH_USER: ${SSH_USER}"
+
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                        """
                     }
                 }
             }
