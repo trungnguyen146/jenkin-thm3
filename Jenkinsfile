@@ -31,37 +31,28 @@
 pipeline {
     agent {
         docker {
-            image 'docker:dind' // Sử dụng Docker-in-Docker
-            args '--privileged'  // dind thường cần --privileged để chạy daemon Docker riêng bên trong container.
-                                 // Việc mount /var/run/docker.sock không cần thiết khi dùng dind.
+            image 'docker:dind'
+            args '--privileged'
         }
     }
 
     environment {
-        DOCKERHUB_USERNAME = 'trungnguyen146' // Có thể không cần nếu credential đã chứa username
+        DOCKERHUB_USERNAME = 'trungnguyen146'
         IMAGE_NAME = 'trungnguyen146/php-website'
-        // Nên sử dụng tag động để dễ quản lý phiên bản, ví dụ:
-        // IMAGE_TAG = "ver${env.BUILD_NUMBER}" 
-        // hoặc IMAGE_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-        IMAGE_TAG = 'ver1' // Giữ lại tag tĩnh của bạn, nhưng cân nhắc thay đổi
+        IMAGE_TAG = 'ver1'
         FULL_IMAGE = "${IMAGE_NAME}:${IMAGE_TAG}"
-        // Đảm bảo 'github-pat' là ID của Jenkins Credential loại "Username with password" cho Docker Hub
-        DOCKERHUB_CREDENTIALS_ID = 'github-pat' 
+        DOCKERHUB_CREDENTIALS_ID = 'github-pat'
 
-        // Staging (Local - Same as Jenkins) - Hiện tại không được sử dụng trong các stages bên dưới
-        // CONTAINER_NAME_STAGING_LOCAL = 'php-container-staging'
-        // HOST_PORT_STAGING_LOCAL = 8800
-        APPLICATION_PORT = 80 // Port của ứng dụng bên trong container
+        APPLICATION_PORT = 80
 
-        // Production VPS
         VPS_PRODUCTION_HOST = '14.225.219.14'
         CONTAINER_NAME_PRODUCTION = 'php-container-prod'
-        HOST_PORT_PRODUCTION = 80 // Port trên VPS để map với APPLICATION_PORT
+        HOST_PORT_PRODUCTION = 80
         SSH_CREDENTIALS_ID = 'Prod_CredID' // ID của Jenkins Credential loại "SSH Username with private key"
     }
 
     triggers {
-        pollSCM('H/2 * * * *') // Kiểm tra SCM mỗi 2 phút
+        pollSCM('H/2 * * * *')
     }
 
     stages {
@@ -73,7 +64,6 @@ pipeline {
 
         stage('Login to Docker Hub') {
             steps {
-                // Sử dụng withCredentials để truy cập username và password một cách an toàn
                 withCredentials([usernamePassword(credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     script {
                         echo "🔐 Logging in to Docker Hub as ${DOCKER_USER}..."
@@ -96,84 +86,55 @@ pipeline {
                             docker push "${env.FULL_IMAGE}"
                         }
                     """
-                    // Sử dụng "${env.FULL_IMAGE}" để Groovy nội suy biến trước khi truyền cho shell
                 }
             }
         }
-
 
         /*
         stage('Test SSH Connection with Key') {
-            steps {
-                script {
-                    withCredentials([sshUserPrivateKey(credentialsId: "${env.SSH_CREDENTIALS_ID}", keyFileVariable: 'TEMP_SSH_KEY', usernameVariable: 'SSH_USER')]) {
-                        echo "🩺 Testing SSH connection to ${SSH_USER}@${env.VPS_PRODUCTION_HOST} using SSH key..."
-                        sh """
-                            chmod 400 "\$TEMP_SSH_KEY"
-                            ssh -o StrictHostKeyChecking=no -i "\$TEMP_SSH_KEY" "${SSH_USER}@${env.VPS_PRODUCTION_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
-                        """
-                    }
-                }
-            }
+            // ... (đã được comment out) ...
         }
+        */
 
         stage('Deploy to Production') {
             when {
-                // Chỉ chạy khi các stage trước thành công (result là null khi đang chạy, SUCCESS khi hoàn thành tốt)
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
                 input message: "Proceed with deployment of ${env.FULL_IMAGE} to Production?"
                 
-                // Cách 1: Sử dụng sshUserPrivateKey (như bạn đang làm)
+                /* // Cách 1: Sử dụng sshUserPrivateKey (đã được comment out)
                 withCredentials([sshUserPrivateKey(credentialsId: "${env.SSH_CREDENTIALS_ID}", keyFileVariable: 'PROD_SSH_KEY', usernameVariable: 'PROD_SSH_USER')]) {
-                    script {
-                        echo "🚀 Deploying to Production (${env.VPS_PRODUCTION_HOST}:${env.HOST_PORT_PRODUCTION})..."
-                        // Các biến Jenkins (env.FULL_IMAGE, env.CONTAINER_NAME_PRODUCTION, ...) cần được Groovy nội suy
-                        // vào chuỗi lệnh sẽ được thực thi trên server từ xa.
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -i "\$PROD_SSH_KEY" "${PROD_SSH_USER}@${env.VPS_PRODUCTION_HOST}" " \\
-                                echo 'Pulling image ${env.FULL_IMAGE}...' && \\
-                                docker pull '${env.FULL_IMAGE}' && \\
-                                echo 'Stopping container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-                                docker stop '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
-                                echo 'Removing container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-                                docker rm '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
-                                echo 'Running new container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-                                docker run -d --name '${env.CONTAINER_NAME_PRODUCTION}' -p '${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT}' '${env.FULL_IMAGE}' && \\
-                                echo '✅ Deployed to Production' \\
-                            "
-                        """
-                        // Lưu ý: Các lệnh docker trên được nối với nhau bằng && để đảm bảo dừng lại nếu có lỗi (trừ stop/rm dùng || true).
-                        // Dấu \ ở cuối dòng để nối chuỗi lệnh dài cho dễ đọc trong Groovy.
-                    }
+                    // ...
                 }
-             */ // Kết thúc khối SSH key 
+                */
 
-                // Cách 2: Sử dụng SSH Agent Plugin (cách kết nối "mới" và thường được khuyến nghị hơn cho nhiều lệnh SSH)
-                // Bạn cần cài đặt plugin "SSH Agent" trong Jenkins.
-
-                   // bắt đầu khối SSH Agent Plugin
-                sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) { // Truyền ID của SSH credential
+                // Cách 2: Sử dụng SSH Agent Plugin
+                // Đảm bảo plugin "SSH Agent" đã được cài đặt trong Jenkins.
+                // Đảm bảo credential "${env.SSH_CREDENTIALS_ID}" (Prod_CredID) là loại "SSH Username with private key"
+                // và có username (ví dụ: 'root') được điền trong cấu hình credential đó trên Jenkins.
+                sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                     script {
-                        def sshUser = '' // Lấy username từ credential nếu có, hoặc định nghĩa ở đây/env
-                        // Nếu credential 'Prod_CredID' của bạn là "SSH Username with private key" và đã có username (vd: 'root')
-                        // thì sshagent sẽ tự động sử dụng username đó.
-                        // Nếu không, bạn cần lấy username:
-                        // withCredentials([sshUserPrivateKey(credentialsId: "${env.SSH_CREDENTIALS_ID}", usernameVariable: 'PROD_SSH_USER_AGENT')]) {
-                        //    sshUser = PROD_SSH_USER_AGENT
-                        // }
-                        // Giả sử username là 'root' hoặc đã có trong credential
-                        // def sshTarget = "root@${env.VPS_PRODUCTION_HOST}" // Thay 'root' nếu cần
-
-                        // Lấy username từ credential một cách an toàn
-                        def sshTarget = ''
-                        withCredentials([sshUserPrivateKey(credentialsId: "${env.SSH_CREDENTIALS_ID}", usernameVariable: 'PROD_SSH_USER_AGENT')]) {
-                           sshTarget = "${PROD_SSH_USER_AGENT}@${env.VPS_PRODUCTION_HOST}"
+                        // Biến usernameVariable 'PROD_SSH_USER_FROM_AGENT' sẽ chứa username từ credential.
+                        // Điều này hữu ích để đảm bảo bạn đang sử dụng đúng username.
+                        def sshLoginUser = ''
+                        withCredentials([sshUserPrivateKey(credentialsId: "${env.SSH_CREDENTIALS_ID}", usernameVariable: 'PROD_SSH_USER_FROM_AGENT')]) {
+                            if (PROD_SSH_USER_FROM_AGENT == null || PROD_SSH_USER_FROM_AGENT.trim().isEmpty()) {
+                                echo "Warning: SSH Username is empty in credential '${env.SSH_CREDENTIALS_ID}'. You may need to explicitly set the user in the ssh command (e.g., 'root@host')."
+                                // Nếu username trống, lệnh ssh có thể thất bại hoặc dùng user mặc định của agent.
+                                // Trong trường hợp này, bạn nên cấu hình username trong credential trên Jenkins
+                                // hoặc sửa thành: sshLoginUser = 'root' (nếu 'root' là user bạn muốn)
+                                error("SSH Username is missing in credential '${env.SSH_CREDENTIALS_ID}'. Please configure it in Jenkins.")
+                            }
+                            sshLoginUser = PROD_SSH_USER_FROM_AGENT
                         }
+                        
+                        def sshTarget = "${sshLoginUser}@${env.VPS_PRODUCTION_HOST}"
 
                         echo "🚀 Deploying to Production using SSH Agent (${sshTarget}:${env.HOST_PORT_PRODUCTION})..."
                         sh """
+                            # Lệnh ssh bây giờ không cần -i keyfile vì SSH agent sẽ cung cấp key.
+                            # Username được lấy từ credential và truyền vào biến sshTarget.
                             ssh -o StrictHostKeyChecking=no "${sshTarget}" " \\
                                 echo 'Pulling image ${env.FULL_IMAGE}...' && \\
                                 docker pull '${env.FULL_IMAGE}' && \\
@@ -188,17 +149,15 @@ pipeline {
                         """
                     }
                 }
-                 // Kết thúc khối SSH Agent 
+                // Kết thúc khối SSH Agent
             }
         }
-    } 
-
-
+    } // Kết thúc stages
 
     post {
         always {
             echo '🧹 Cleaning up Docker system on agent...'
-            sh 'docker system prune -af' // -a để xóa cả images không dùng, -f để không hỏi confirm
+            sh 'docker system prune -af'
         }
         success {
             echo "🎉 Pipeline finished successfully!"
@@ -208,7 +167,6 @@ pipeline {
         }
     }
 } // Kết thúc khối pipeline
-
 
 
 
