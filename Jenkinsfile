@@ -2,23 +2,22 @@ pipeline {
     agent any
 
     environment {
-        VPS_PRODUCTION_CREDENTIALS_ID = 'Prod_CredID' 
-        VPS_PRODUCTION_HOST = '14.225.219.14'      
-        SSH_USERNAME = 'root'                  
+        VPS_PRODUCTION_HOST = '14.225.219.14'
     }
 
     stages {
-        stage('Test SSH Connection') {
+        stage('Test Production SSH Connection') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
+                withCredentials([usernamePassword(credentialsId: 'shinfo', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASSWORD')]) {
                     script {
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
-                        def SSH_USER = "${env.SSH_USER}"
+                        def SSH_USER = "${SSH_USER}"
+                        def SSH_PASSWORD = "${SSH_PASSWORD}"
 
-                        echo "🩺 Testing SSH connection to ${SSH_USER}@${SSH_HOST}..."
+                        echo "🩺 Testing SSH connection to ${SSH_USER}@${SSH_HOST} using password..."
 
                         sh """
-                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            sshpass -p "\$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
