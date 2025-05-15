@@ -2,22 +2,22 @@ pipeline {
     agent any
 
     environment {
-        VPS_PRODUCTION_HOST = '14.225.219.14'
+        VPS_PRODUCTION_HOST = '14.225.219.14'      // Thay bằng IP hoặc hostname VPS của bạn
+        SSH_CREDENTIALS_ID = 'Prod_CredID'         // Thay bằng ID credential SSH key của bạn
     }
 
     stages {
-        stage('Test Production SSH Connection') {
+        stage('Test SSH Connection with Key') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'shinfo', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASSWORD')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'Prod_CredID', usernameVariable: 'SSH_USER')]) {
                     script {
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
                         def SSH_USER = "${SSH_USER}"
-                        def SSH_PASSWORD = "${SSH_PASSWORD}"
 
-                        echo "🩺 Testing SSH connection to ${SSH_USER}@${SSH_HOST} using password..."
+                        echo "🩺 Testing SSH connection to ${SSH_USER}@${SSH_HOST} using SSH key..."
 
                         sh """
-                            sshpass -p "\$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
+                            ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${SSH_HOST}" -p 22 -o ConnectTimeout=10 'echo Connected successfully'
                         """
                     }
                 }
@@ -101,7 +101,7 @@ pipeline {
 //                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
 //             }
 //             steps {
-//                 withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
+//                 withCredentials([sshUserPrivateKey(credentialsId: 'Prod_CredID', usernameVariable: 'SSH_USER')]) {
 //                     script {
 //                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
