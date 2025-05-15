@@ -7,7 +7,7 @@ pipeline {
         SSH_USERNAME = 'root'                     // Thay bằng username SSH của bạn (nếu cần)
     }
 
-stages {
+ stages {
     stage('Test SSH Connection with Key (Manual)') {
         steps {
             script {
