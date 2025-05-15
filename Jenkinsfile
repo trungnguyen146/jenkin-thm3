@@ -101,6 +101,8 @@ pipeline {
             }
         }
 
+
+        /*
         stage('Test SSH Connection with Key') {
             steps {
                 script {
@@ -146,10 +148,12 @@ pipeline {
                         // Dấu \ ở cuối dòng để nối chuỗi lệnh dài cho dễ đọc trong Groovy.
                     }
                 }
+             */ // Kết thúc khối SSH key 
 
                 // Cách 2: Sử dụng SSH Agent Plugin (cách kết nối "mới" và thường được khuyến nghị hơn cho nhiều lệnh SSH)
                 // Bạn cần cài đặt plugin "SSH Agent" trong Jenkins.
-                /*
+
+                   // bắt đầu khối SSH Agent Plugin
                 sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) { // Truyền ID của SSH credential
                     script {
                         def sshUser = '' // Lấy username từ credential nếu có, hoặc định nghĩa ở đây/env
@@ -184,7 +188,7 @@ pipeline {
                         """
                     }
                 }
-                */ // Kết thúc khối SSH Agent 
+                 // Kết thúc khối SSH Agent 
             }
         }
     } // Kết thúc khối stages chính
