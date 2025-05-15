@@ -67,7 +67,7 @@ pipeline {
                 expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "$VPS_PRODUCTION_CREDENTIALS_ID", usernameVariable: 'SSH_USER')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${VPS_PRODUCTION_CREDENTIALS_ID}", usernameVariable: 'SSH_USER')]) {
                     script {
                         def SSH_HOST = "${VPS_PRODUCTION_HOST}"
 
