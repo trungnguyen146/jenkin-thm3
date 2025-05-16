@@ -95,8 +95,8 @@ pipeline {
             steps {
                 // input message: "Proceed with deployment to Production?"
                 sshagent([env.SSH_CREDENTIALS_ID]) {
-                  script{ 
-                    def output = sh(script: """
+                  
+                     sh """
                         ssh -o StrictHostKeyChecking=no -T root@${env.VPS_PRODUCTION_HOST} '
                             docker pull ${env.FULL_IMAGE}
                             docker stop ${env.CONTAINER_NAME_PRODUCTION} || true
@@ -104,12 +104,11 @@ pipeline {
                             docker run -d --name ${env.CONTAINER_NAME_PRODUCTION} -p ${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
                             echo "✅ Deployed to Production"
                         '
-                    """, returnStdout: true).trim()
-                    echo "Deploy output: ${output}"
+                    """
                 }
             }
         }
-    } 
+    
 }      
 
     post {
