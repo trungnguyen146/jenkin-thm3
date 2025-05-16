@@ -92,12 +92,22 @@ pipeline {
             }
         }
 
-        stage('Test SSH Connection') {
+        // stage('Test SSH Connection') {
+        //     steps {
+        //         withCredentials([sshUserPrivateKey(credentialsId: SSH_CREDENTIALS_ID, usernameVariable: 'SSH_USER')]) {
+        //             sh """
+        //                 ssh -o StrictHostKeyChecking=no -T -p 22 "\$SSH_USER@${VPS_PRODUCTION_HOST}" 'echo Connected successfully'
+        //             """
+        //         }
+        //     }
+        // }
+
+
+            stages {
+        stage('Test SSH Simple') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: SSH_CREDENTIALS_ID, usernameVariable: 'SSH_USER')]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no -T -p 22 "\$SSH_USER@${VPS_PRODUCTION_HOST}" 'echo Connected successfully'
-                    """
+                sshagent([env.SSH_CREDENTIALS_ID]) {
+                    sh "ssh -o StrictHostKeyChecking=no root@${env.VPS_PRODUCTION_HOST} 'echo \"SSH connection successful\"'"
                 }
             }
         }
