@@ -39,7 +39,7 @@ pipeline {
     environment {
         DOCKERHUB_USERNAME = 'trungnguyen146'
         IMAGE_NAME = 'trungnguyen146/php-website'
-        IMAGE_TAG = 'ver1' // Cân nhắc dùng tag động: "ver${env.BUILD_NUMBER}"
+        IMAGE_TAG = 'ver1'
         FULL_IMAGE = "${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDENTIALS_ID = 'github-pat'
 
@@ -48,17 +48,26 @@ pipeline {
         VPS_PRODUCTION_HOST = '14.225.219.14'
         CONTAINER_NAME_PRODUCTION = 'php-container-prod'
         HOST_PORT_PRODUCTION = 80
-        SSH_CREDENTIALS_ID = 'Prod_CredID' // ID của Jenkins Credential loại "SSH Username with private key"
+        SSH_CREDENTIALS_ID = 'Prod_CredID'
     }
 
+    stages {
+        stage('Test SSH Simple') {
+            steps {
+                sshagent([env.SSH_CREDENTIALS_ID]) {
+                    sh "ssh -o StrictHostKeyChecking=no root@${env.VPS_PRODUCTION_HOST} 'echo \"SSH connection successful\"'"
+                }
+            }
+        }
+    }
 
-stage('Test SSH Simple') {
-    steps {
-        sshagent(['Prod_CredID']) {
-            sh "ssh -o StrictHostKeyChecking=no root@${env.VPS_PRODUCTION_HOST} 'echo \"SSH connection successful\"'"
+    post {
+        always {
+            echo 'Clean up...'
         }
     }
 }
+
 
 //     triggers {
 //         pollSCM('H/2 * * * *')
