@@ -52,7 +52,7 @@ pipeline {
     }
 
 
-    stage('Test SSH Simple') {
+stage('Test SSH Simple') {
     steps {
         sshagent(['Prod_CredID']) {
             sh "ssh -o StrictHostKeyChecking=no root@${env.VPS_PRODUCTION_HOST} 'echo \"SSH connection successful\"'"
