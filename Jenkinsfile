@@ -92,17 +92,6 @@ pipeline {
             }
         }
 
-        // stage('Test SSH Connection') {
-        //     steps {
-        //         withCredentials([sshUserPrivateKey(credentialsId: SSH_CREDENTIALS_ID, usernameVariable: 'SSH_USER')]) {
-        //             sh """
-        //                 ssh -o StrictHostKeyChecking=no -T -p 22 "\$SSH_USER@${VPS_PRODUCTION_HOST}" 'echo Connected successfully'
-        //             """
-        //         }
-        //     }
-        // }
-
-
         stage('Test SSH Simple') {
             steps {
                 sshagent([env.SSH_CREDENTIALS_ID]) {
@@ -110,8 +99,6 @@ pipeline {
                 }
             }
         }
-
-
 
         stage('Deploy to Production') {
             when {
@@ -132,27 +119,7 @@ pipeline {
                 }
             }
         }
-
-    //     stage('Deploy to Production') {
-    //         when {
-    //             expression { currentBuild.currentResult == null || currentBuild.currentResult == 'SUCCESS' }
-    //         }
-    //         steps {
-    //             input message: "Proceed with deployment to Production?"
-    //             withCredentials([sshUserPrivateKey(credentialsId: SSH_CREDENTIALS_ID, usernameVariable: 'SSH_USER')]) {
-    //                 sh """
-    //                     ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${VPS_PRODUCTION_HOST}" '
-    //                         docker pull ${FULL_IMAGE}
-    //                         docker stop ${CONTAINER_NAME_PRODUCTION} || true
-    //                         docker rm ${CONTAINER_NAME_PRODUCTION} || true
-    //                         docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
-    //                         echo "✅ Deployed to Production"
-    //                     '
-    //                 """
-    //             }
-    //         }
-    //     }
-    // }
+    } // đóng stages
 
     post {
         always {
@@ -166,4 +133,5 @@ pipeline {
             echo '💔 Pipeline failed. Check logs.'
         }
     }
-}
+} // đóng pipeline
+
