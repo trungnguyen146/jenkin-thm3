@@ -111,26 +111,48 @@ pipeline {
             }
         }
 
+
+
         stage('Deploy to Production') {
             when {
                 expression { currentBuild.currentResult == null || currentBuild.currentResult == 'SUCCESS' }
             }
             steps {
                 input message: "Proceed with deployment to Production?"
-                withCredentials([sshUserPrivateKey(credentialsId: SSH_CREDENTIALS_ID, usernameVariable: 'SSH_USER')]) {
+                sshagent([env.SSH_CREDENTIALS_ID]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${VPS_PRODUCTION_HOST}" '
-                            docker pull ${FULL_IMAGE}
-                            docker stop ${CONTAINER_NAME_PRODUCTION} || true
-                            docker rm ${CONTAINER_NAME_PRODUCTION} || true
-                            docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
+                        ssh -o StrictHostKeyChecking=no -T root@${env.VPS_PRODUCTION_HOST} '
+                            docker pull ${env.FULL_IMAGE}
+                            docker stop ${env.CONTAINER_NAME_PRODUCTION} || true
+                            docker rm ${env.CONTAINER_NAME_PRODUCTION} || true
+                            docker run -d --name ${env.CONTAINER_NAME_PRODUCTION} -p ${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
                             echo "✅ Deployed to Production"
                         '
                     """
                 }
             }
         }
-    }
+
+    //     stage('Deploy to Production') {
+    //         when {
+    //             expression { currentBuild.currentResult == null || currentBuild.currentResult == 'SUCCESS' }
+    //         }
+    //         steps {
+    //             input message: "Proceed with deployment to Production?"
+    //             withCredentials([sshUserPrivateKey(credentialsId: SSH_CREDENTIALS_ID, usernameVariable: 'SSH_USER')]) {
+    //                 sh """
+    //                     ssh -o StrictHostKeyChecking=no -T "\$SSH_USER@${VPS_PRODUCTION_HOST}" '
+    //                         docker pull ${FULL_IMAGE}
+    //                         docker stop ${CONTAINER_NAME_PRODUCTION} || true
+    //                         docker rm ${CONTAINER_NAME_PRODUCTION} || true
+    //                         docker run -d --name ${CONTAINER_NAME_PRODUCTION} -p ${HOST_PORT_PRODUCTION}:${APPLICATION_PORT} ${FULL_IMAGE}
+    //                         echo "✅ Deployed to Production"
+    //                     '
+    //                 """
+    //             }
+    //         }
+    //     }
+    // }
 
     post {
         always {
