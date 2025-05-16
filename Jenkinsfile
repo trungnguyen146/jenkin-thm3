@@ -125,64 +125,64 @@ pipeline {
             }
         }
 
-        stage('Deploy to Production') {
-            when {
-                expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                input message: "Proceed with deployment of ${env.FULL_IMAGE} to Production?"
+        // stage('Deploy to Production') {
+        //     when {
+        //         expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+        //     }
+        //     steps {
+        //         input message: "Proceed with deployment of ${env.FULL_IMAGE} to Production?"
                 
-                // "Cách 1" được cập nhật để sử dụng SSH Steps plugin
-                script {
-                    // 1. Khởi tạo map 'remoteDeployConfig'
-                    def remoteDeployConfig = [:]
+        //         // "Cách 1" được cập nhật để sử dụng SSH Steps plugin
+        //         script {
+        //             // 1. Khởi tạo map 'remoteDeployConfig'
+        //             def remoteDeployConfig = [:]
 
-                    // 2. Điền thông tin cơ bản
-                    remoteDeployConfig.name = "production-vps-deploy"
-                    remoteDeployConfig.host = env.VPS_PRODUCTION_HOST
-                    remoteDeployConfig.allowAnyHosts = true // Nếu lỗi, thử: knownHosts: 'NONE'
-                    // remoteDeployConfig.port = 22
+        //             // 2. Điền thông tin cơ bản
+        //             remoteDeployConfig.name = "production-vps-deploy"
+        //             remoteDeployConfig.host = env.VPS_PRODUCTION_HOST
+        //             remoteDeployConfig.allowAnyHosts = true // Nếu lỗi, thử: knownHosts: 'NONE'
+        //             // remoteDeployConfig.port = 22
 
-                    // 3. Lấy credential và hoàn thiện map
-                    withCredentials([sshUserPrivateKey(
-                        credentialsId: "${env.SSH_CREDENTIALS_ID}",
-                        keyFileVariable: 'deployKeyFile',
-                        passphraseVariable: '',
-                        usernameVariable: 'deploySshUsername'
-                    )]) {
-                        remoteDeployConfig.user = deploySshUsername
-                        remoteDeployConfig.identityFile = deployKeyFile
+        //             // 3. Lấy credential và hoàn thiện map
+        //             withCredentials([sshUserPrivateKey(
+        //                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
+        //                 keyFileVariable: 'deployKeyFile',
+        //                 passphraseVariable: '',
+        //                 usernameVariable: 'deploySshUsername'
+        //             )]) {
+        //                 remoteDeployConfig.user = deploySshUsername
+        //                 remoteDeployConfig.identityFile = deployKeyFile
 
-                        echo "🚀 Đang triển khai tới Production (${remoteDeployConfig.user}@${remoteDeployConfig.host}:${env.HOST_PORT_PRODUCTION}) bằng SSH Steps plugin..."
+        //                 echo "🚀 Đang triển khai tới Production (${remoteDeployConfig.user}@${remoteDeployConfig.host}:${env.HOST_PORT_PRODUCTION}) bằng SSH Steps plugin..."
                         
-                        // 4. Chuẩn bị chuỗi lệnh deploy (sử dụng GString để ${env.VAR} được nội suy bởi Groovy)
-                        def deployCommands = """
-                            echo 'Pulling image ${env.FULL_IMAGE}...' && \\
-                            docker pull '${env.FULL_IMAGE}' && \\
-                            echo 'Stopping container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-                            docker stop '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
-                            echo 'Removing container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-                            docker rm '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
-                            echo 'Running new container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-                            docker run -d --name '${env.CONTAINER_NAME_PRODUCTION}' -p '${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT}' '${env.FULL_IMAGE}' && \\
-                            echo '✅ Đã triển khai lên Production'
-                        """
+        //                 // 4. Chuẩn bị chuỗi lệnh deploy (sử dụng GString để ${env.VAR} được nội suy bởi Groovy)
+        //                 def deployCommands = """
+        //                     echo 'Pulling image ${env.FULL_IMAGE}...' && \\
+        //                     docker pull '${env.FULL_IMAGE}' && \\
+        //                     echo 'Stopping container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
+        //                     docker stop '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
+        //                     echo 'Removing container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
+        //                     docker rm '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
+        //                     echo 'Running new container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
+        //                     docker run -d --name '${env.CONTAINER_NAME_PRODUCTION}' -p '${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT}' '${env.FULL_IMAGE}' && \\
+        //                     echo '✅ Đã triển khai lên Production'
+        //                 """
                         
-                        // 5. Thực thi lệnh deploy
-                        sshCommand remote: remoteDeployConfig, command: deployCommands
+        //                 // 5. Thực thi lệnh deploy
+        //                 sshCommand remote: remoteDeployConfig, command: deployCommands
                         
-                        echo "✅ Các lệnh triển khai đã được gửi qua SSH Steps plugin."
-                    }
-                }
+        //                 echo "✅ Các lệnh triển khai đã được gửi qua SSH Steps plugin."
+        //             }
+        //         }
 
-                // "Cách 2": Sử dụng SSH Agent Plugin (vẫn giữ nguyên, đang được comment out)
-                /*
-                sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                    // ... (code cho SSH Agent như trước) ...
-                }
-                */
-            }
-        }
+        //         // "Cách 2": Sử dụng SSH Agent Plugin (vẫn giữ nguyên, đang được comment out)
+        //         /*
+        //         sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+        //             // ... (code cho SSH Agent như trước) ...
+        //         }
+        //         */
+        //     }
+        // }
     } // Kết thúc khối stages
 
     post {
