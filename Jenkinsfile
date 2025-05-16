@@ -90,40 +90,67 @@ pipeline {
             }
         }
 
-        stage('Test SSH Connection with Key (using SSH Steps)') { // Đã cập nhật tên stage cho rõ ràng
-            steps {
-                script {
-                    // 1. Khởi tạo map 'remoteTestConfig'
-                    def remoteTestConfig = [:]
-                    
-                    // 2. Điền thông tin cơ bản
-                    remoteTestConfig.name = "production-vps-test"      // Tên mô tả
-                    remoteTestConfig.host = env.VPS_PRODUCTION_HOST     // IP host từ biến môi trường
-                    remoteTestConfig.allowAnyHosts = true               // Giống ví dụ của bạn. Nếu lỗi, thử: knownHosts: 'NONE'
-                    // remoteTestConfig.port = 22                       // Port mặc định là 22, có thể bỏ qua
-                    // remoteTestConfig.options = [ConnectTimeout: '10'] // Tùy chọn timeout, nếu plugin hỗ trợ dạng này
 
-                    // 3. Lấy credential và hoàn thiện map
-                    withCredentials([sshUserPrivateKey(
-                        credentialsId: "${env.SSH_CREDENTIALS_ID}",
-                        keyFileVariable: 'testKeyFile',          // Tên biến cho file key
-                        passphraseVariable: '',                  // Để trống nếu key không có passphrase
-                        usernameVariable: 'testSshUsername'      // Tên biến cho username
-                    )]) {
-                        remoteTestConfig.user = testSshUsername
-                        remoteTestConfig.identityFile = testKeyFile
 
-                        echo "🩺 Đang kiểm tra kết nối SSH tới ${remoteTestConfig.user}@${remoteTestConfig.host} bằng SSH Steps plugin..."
-                        
-                        // 4. Thực thi lệnh test
-                        def testConnectionCommand = 'echo "✅ Kết nối SSH Steps thành công tới $(hostname) với tư cách $(whoami)! Ngày giờ server: $(date)"'
-                        sshCommand remote: remoteTestConfig, command: testConnectionCommand
-                        
-                        echo "✅ Kiểm tra kết nối SSH bằng SSH Steps thành công."
-                    }
-                }
+
+    stage('Test SSH Connection with Key (using SSH Steps)') {
+    steps {
+        script {
+            withCredentials([sshUserPrivateKey(
+                credentialsId: "${env.SSH_CREDENTIALS_ID}",
+                keyFileVariable: 'sshKeyFile',
+                usernameVariable: 'sshUser'
+            )]) {
+                def remote = [
+                    name: "production-vps-test",
+                    host: env.VPS_PRODUCTION_HOST,
+                    user: sshUser,
+                    identityFile: sshKeyFile,
+                    allowAnyHosts: true
+                ]
+                echo "🩺 Đang kiểm tra kết nối SSH tới ${sshUser}@${env.VPS_PRODUCTION_HOST} ..."
+                sshCommand remote: remote, command: 'echo "✅ SSH kết nối thành công đến $(hostname)"'
             }
         }
+    }
+}
+
+        
+
+        // stage('Test SSH Connection with Key (using SSH Steps)') { // Đã cập nhật tên stage cho rõ ràng
+        //     steps {
+        //         script {
+        //             // 1. Khởi tạo map 'remoteTestConfig'
+        //             def remoteTestConfig = [:]
+                    
+        //             // 2. Điền thông tin cơ bản
+        //             remoteTestConfig.name = "production-vps-test"      // Tên mô tả
+        //             remoteTestConfig.host = env.VPS_PRODUCTION_HOST     // IP host từ biến môi trường
+        //             remoteTestConfig.allowAnyHosts = true               // Giống ví dụ của bạn. Nếu lỗi, thử: knownHosts: 'NONE'
+        //             // remoteTestConfig.port = 22                       // Port mặc định là 22, có thể bỏ qua
+        //             // remoteTestConfig.options = [ConnectTimeout: '10'] // Tùy chọn timeout, nếu plugin hỗ trợ dạng này
+
+        //             // 3. Lấy credential và hoàn thiện map
+        //             withCredentials([sshUserPrivateKey(
+        //                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
+        //                 keyFileVariable: 'testKeyFile',          // Tên biến cho file key
+        //                 passphraseVariable: '',                  // Để trống nếu key không có passphrase
+        //                 usernameVariable: 'testSshUsername'      // Tên biến cho username
+        //             )]) {
+        //                 remoteTestConfig.user = testSshUsername
+        //                 remoteTestConfig.identityFile = testKeyFile
+
+        //                 echo "🩺 Đang kiểm tra kết nối SSH tới ${remoteTestConfig.user}@${remoteTestConfig.host} bằng SSH Steps plugin..."
+                        
+        //                 // 4. Thực thi lệnh test
+        //                 def testConnectionCommand = 'echo "✅ Kết nối SSH Steps thành công tới $(hostname) với tư cách $(whoami)! Ngày giờ server: $(date)"'
+        //                 sshCommand remote: remoteTestConfig, command: testConnectionCommand
+                        
+        //                 echo "✅ Kiểm tra kết nối SSH bằng SSH Steps thành công."
+        //             }
+        //         }
+        //     }
+        // }
 
         // stage('Deploy to Production') {
         //     when {
