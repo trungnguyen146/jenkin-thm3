@@ -93,7 +93,7 @@ pipeline {
                 expression { currentBuild.currentResult == null || currentBuild.currentResult == 'SUCCESS' }
             }
             steps {
-                input message: "Proceed with deployment to Production?"
+                // input message: "Proceed with deployment to Production?"
                 sshagent([env.SSH_CREDENTIALS_ID]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no -T root@${env.VPS_PRODUCTION_HOST} '
