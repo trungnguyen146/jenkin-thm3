@@ -1,4 +1,4 @@
-# Tài liệu Hướng dẫn Cài đặt CI/CD với Jenkins
+# Tài liệu Hướng dẫn Cài đặt CI/CD với Jenkins (Phiên bản Docker Compose)
 
 **Mục tiêu:**
 Hướng dẫn này nhằm mục đích giúp bạn thiết lập một quy trình CI/CD cơ bản sử dụng Jenkins để tự động hóa việc build, test (cơ bản), đóng gói Docker image, đẩy lên Docker Hub và triển khai một ứng dụng web đơn giản (ví dụ: PHP) lên một server production.
@@ -7,36 +7,38 @@ Hướng dẫn này nhằm mục đích giúp bạn thiết lập một quy trì
 
 ---
 
-## Phần 1: Yêu Cầu Tiên Quyết
+## Phần 1: Yêu Cầu Tiên Quyết (Điều chỉnh cho Docker Compose)
 
 Trước khi bắt đầu, bạn cần chuẩn bị:
 
-1.  **Server cho Jenkins Master:**
-    * Hệ điều hành: Linux (khuyến nghị Ubuntu 20.04/22.04 LTS hoặc CentOS/RHEL).
-    * Cấu hình tối thiểu: 2 vCPU, 4GB RAM, 50GB HDD/SSD (SSD tốt hơn).
-    * Đã cài đặt Java (JDK 11 hoặc JDK 17 là các phiên bản được Jenkins LTS hỗ trợ tốt hiện nay - kiểm tra trang chủ Jenkins để biết phiên bản Java khuyến nghị mới nhất).
-    * Có quyền `sudo` hoặc `root`.
-    * Truy cập Internet để tải Jenkins và các plugin.
+1.  **Server để chạy Jenkins (qua Docker Compose):**
+    * Hệ điều hành: Linux (khuyến nghị Ubuntu 20.04/22.04 LTS hoặc CentOS/RHEL). Windows hoặc macOS có Docker Desktop cũng có thể hoạt động, nhưng hướng dẫn này tập trung vào Linux server.
+    * **Đã cài đặt Docker và Docker Compose:** Đây là yêu cầu bắt buộc.
+        * Hướng dẫn cài Docker: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
+        * Hướng dẫn cài Docker Compose: [https://docs.docker.com/compose/install/](https://docs.docker.com/compose/install/)
+    * Cấu hình tối thiểu cho server host: 2 vCPU, 4GB RAM (khuyến nghị 8GB+ nếu Jenkins chạy nhiều job phức tạp), 50GB HDD/SSD.
+    * Có quyền `sudo` hoặc quyền chạy lệnh `docker` và `docker-compose`.
+    * Truy cập Internet để tải Docker images (Jenkins, dind, etc.).
+    * **Lưu ý:** Bạn không cần cài đặt Java trực tiếp trên server host này vì Jenkins sẽ chạy trong một Docker container đã có sẵn Java.
 
 2.  **Server cho Môi trường Production (VPS Production):**
     * Hệ điều hành: Linux.
     * Đã cài đặt Docker.
-    * Có thể truy cập SSH bằng key từ Jenkins Master.
+    * Có thể truy cập SSH bằng key từ container Jenkins (hoặc từ Jenkins agent nếu bạn cấu hình agent riêng).
     * Truy cập Internet để pull Docker image.
-    * (Tùy chọn) Server Staging: Nếu bạn muốn có môi trường Staging, chuẩn bị tương tự Production.
+    * (Tùy chọn) Server Staging: Chuẩn bị tương tự Production.
 
 3.  **Tài khoản và Công cụ:**
     * **Tài khoản GitHub (hoặc GitLab/Bitbucket):** Để lưu trữ mã nguồn ứng dụng.
     * **Tài khoản Docker Hub:** Để lưu trữ Docker image sau khi build.
-    * **Docker:** Cần cài đặt Docker trên máy bạn dùng để tạo Dockerfile (nếu bạn phát triển local) và trên server Production/Staging.
-    * **Kiến thức cơ bản:** Về Git, câu lệnh Linux, Docker (Dockerfile, image, container), và SSH.
+    * **Kiến thức cơ bản:** Về Git, câu lệnh Linux, Docker (Dockerfile, image, container, **Docker Compose**), và SSH.
 
 4.  **Ứng dụng Mẫu:**
     * Một ứng dụng web đơn giản. Ví dụ, một file `index.php` với nội dung:
         ```php
         <?php
         echo "<h1>Hello World from Jenkins CI/CD!</h1>";
-        echo "<p>Version: 1.0.0</p>";
+        echo "<p>Version: 1.0.1</p>"; // Thay đổi version để thấy cập nhật
         echo "<p>Hostname: " . gethostname() . "</p>";
         echo "<p>Deployed at: " . date('Y-m-d H:i:s') . "</p>";
         ?>
@@ -51,143 +53,133 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
 
 ---
 
-## Phần 2: Cài Đặt và Cấu Hình Jenkins
+## Phần 2: Cài Đặt và Cấu Hình Jenkins (Sử dụng Docker Compose)
 
-1.  **Cài đặt Java (nếu chưa có):**
-    Kiểm tra phiên bản Java được Jenkins khuyến nghị tại [https://www.jenkins.io/doc/administration/requirements/java/](https://www.jenkins.io/doc/administration/requirements/java/).
-    Ví dụ cài đặt OpenJDK 17 trên Ubuntu:
+1.  **Chuẩn bị thư mục và file `docker-compose.yml`:**
+    Trên server bạn dùng để chạy Jenkins, tạo một thư mục để lưu trữ cấu hình Docker Compose và dữ liệu Jenkins.
     ```bash
-    sudo apt update
-    sudo apt install -y openjdk-17-jdk
-    java -version # Kiểm tra phiên bản
+    mkdir jenkins-server-compose
+    cd jenkins-server-compose
+    nano docker-compose.yml
+    ```
+    Dán nội dung sau vào file `docker-compose.yml`:
+    ```yaml
+    version: '3.8'
+
+    services:
+      jenkins:
+        image: jenkins/jenkins:lts-jdk17 
+        container_name: jenkins-lts
+        restart: unless-stopped 
+        ports:
+          - "8080:8080" 
+          - "50000:50000" 
+        volumes:
+          - jenkins_data:/var/jenkins_home 
+          - /var/run/docker.sock:/var/run/docker.sock # Tùy chọn, cho phép Jenkins container dùng Docker daemon của host
+        environment:
+          - TZ=Asia/Ho_Chi_Minh # Cấu hình múi giờ, thay bằng múi giờ của bạn
+          # - JAVA_OPTS=-Xmx2048m -Xms512m # Ví dụ cấu hình memory cho Jenkins
+
+    volumes:
+      jenkins_data: {} 
     ```
 
-2.  **Cài đặt Jenkins:**
-    Làm theo hướng dẫn chính thức trên trang chủ Jenkins cho hệ điều hành của bạn: [https://www.jenkins.io/doc/book/installing/](https://www.jenkins.io/doc/book/installing/)
-    Ví dụ cho Ubuntu (sử dụng LTS package):
+2.  **Khởi chạy Jenkins bằng Docker Compose:**
+    Trong thư mục `jenkins-server-compose`, chạy lệnh:
     ```bash
-    # Thêm GPG key
-    sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
-      [https://pkg.jenkins.io/debian-lts/jenkins.io-2023.key](https://pkg.jenkins.io/debian-lts/jenkins.io-2023.key)
-    # Thêm Jenkins repository
-    echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
-      [https://pkg.jenkins.io/debian-lts](https://pkg.jenkins.io/debian-lts) binary/ | sudo tee \
-      /etc/apt/sources.list.d/jenkins.list > /dev/null
-    # Cài đặt Jenkins
-    sudo apt-get update
-    sudo apt-get install -y jenkins
-    # Khởi động và kiểm tra status
-    sudo systemctl start jenkins
-    sudo systemctl enable jenkins # Tự khởi động cùng hệ thống
-    sudo systemctl status jenkins
+    docker-compose up -d
     ```
-    Jenkins thường chạy trên port `8080`. Truy cập `http://<IP_SERVER_JENKINS>:8080`.
+    Kiểm tra trạng thái container: `docker-compose ps` hoặc `docker ps`.
+    Xem log khởi tạo của Jenkins: `docker-compose logs -f jenkins`.
 
-3.  **Thiết lập Jenkins lần đầu:**
-    * **Unlock Jenkins:** Lấy initial admin password từ file trên server Jenkins:
+3.  **Thiết lập Jenkins lần đầu (sau khi chạy bằng Docker Compose):**
+    * Truy cập Jenkins qua trình duyệt: `http://<IP_SERVER_CHAY_DOCKER_COMPOSE>:8080`.
+    * **Unlock Jenkins:** Lấy `initialAdminPassword` từ log (lệnh `docker-compose logs jenkins`) hoặc bằng lệnh:
         ```bash
-        sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+        docker exec jenkins-lts cat /var/jenkins_home/secrets/initialAdminPassword
         ```
-        Copy password này và dán vào trình duyệt.
-    * **Install suggested plugins:** Chọn "Install suggested plugins". Quá trình này có thể mất vài phút.
+        Copy mật khẩu này và dán vào trình duyệt.
+    * **Install suggested plugins:** Chọn "Install suggested plugins".
     * **Create First Admin User:** Tạo tài khoản admin của bạn.
 
 4.  **Cài đặt các Plugins cần thiết:**
-    Sau khi vào được dashboard Jenkins, đi đến **Manage Jenkins > Plugins** (hoặc Manage Plugins).
-    Trong tab **Available plugins**, tìm và cài đặt các plugin sau:
-    * `Pipeline`: Thường đã được cài sẵn, đây là plugin cốt lõi cho Jenkinsfile.
-    * `Git plugin`: Để checkout code từ Git. Thường đã được cài.
-    * `Docker Pipeline`: Cung cấp các bước tích hợp Docker vào pipeline (ví dụ: `docker.build()`, `image.push()`).
-    * `Docker Commons Plugin`: Thường là dependency của Docker Pipeline.
-    * `SSH Pipeline Steps`: Cung cấp các bước tiện lợi để thực thi lệnh qua SSH (`sshCommand`, `sshScript`, `sshPut`, `sshGet`).
-    * `Credentials Binding Plugin`: Để sử dụng credentials một cách an toàn trong pipeline. Thường đã được cài.
-    * (Tùy chọn) `Blue Ocean`: Cung cấp giao diện người dùng hiện đại hơn cho pipeline.
-
-    Chọn các plugin và nhấn "Install without restart" (hoặc "Download now and install after restart").
+    Đi đến **Manage Jenkins > Plugins > Available plugins**, tìm và cài đặt:
+    * `Pipeline` (thường có sẵn)
+    * `Git plugin` (thường có sẵn)
+    * `Docker Pipeline`
+    * `Docker Commons Plugin`
+    * `SSH Pipeline Steps` (cung cấp `sshCommand`, `sshScript`, etc.)
+    * `Credentials Binding Plugin` (thường có sẵn)
+    * (Tùy chọn) `Blue Ocean`
 
 5.  **Cấu hình Global Tool Configuration (nếu cần):**
-    * **Manage Jenkins > Tools** (hoặc Global Tool Configuration).
-    * **JDK:** Nếu bạn cài nhiều JDK, có thể cấu hình ở đây. Jenkins thường tự phát hiện JDK đã cài.
-    * **Git:** Thường Jenkins tự phát hiện Git. Nếu không, bạn cần chỉ đường dẫn.
-    * **Docker:** Nếu Jenkins master cũng là nơi build Docker image (và không dùng agent Docker-in-Docker), bạn có thể cần cấu hình Docker tool. Tuy nhiên, với agent `docker:dind` trong Jenkinsfile, Jenkins master không cần cài Docker trực tiếp.
+    Thường không cần cấu hình gì thêm ở đây khi Jenkins chạy bằng Docker và pipeline agent của bạn là `docker:dind`.
 
 6.  **Cấu hình Credentials trong Jenkins:**
-    Đây là bước cực kỳ quan trọng để Jenkins có thể tương tác với các dịch vụ khác một cách an toàn.
-    Đi đến **Manage Jenkins > Credentials > System > Global credentials (unrestricted)** (hoặc một domain cụ thể nếu bạn muốn). Nhấn **Add Credentials**.
+    Đi đến **Manage Jenkins > Credentials > System > Global credentials (unrestricted) > Add Credentials**. Tạo các credentials:
 
     * **a. GitHub Personal Access Token (PAT):**
         * **Kind:** `Secret text`
-        * **Secret:** Dán GitHub PAT của bạn vào đây. (Tạo PAT trên GitHub với quyền `repo` để đọc repository).
-        * **ID:** `github-pat` (hoặc một ID dễ nhớ, bạn sẽ dùng ID này trong Jenkinsfile).
-        * **Description:** (Tùy chọn) Mô tả.
+        * **ID:** `github-pat` (hoặc ID bạn chọn)
+        * **Secret:** PAT của bạn.
 
     * **b. Docker Hub Credentials:**
         * **Kind:** `Username with password`
-        * **Username:** Username Docker Hub của bạn.
-        * **Password:** Password Docker Hub của bạn (hoặc Access Token nếu Docker Hub hỗ trợ).
-        * **ID:** `dockerhub-credentials` (ví dụ, bạn sẽ dùng ID này).
-        * **Description:** (Tùy chọn) Mô tả.
+        * **ID:** `dockerhub-credentials` (hoặc ID bạn chọn)
+        * **Username:** Username Docker Hub.
+        * **Password:** Password Docker Hub (hoặc Access Token).
 
     * **c. SSH Private Key cho Server Production/Staging:**
-        * **Tạo cặp SSH Key:** Nếu bạn chưa có, hãy tạo một cặp key SSH mới (ví dụ: trên Jenkins master hoặc máy local của bạn):
+        * Tạo cặp key SSH nếu chưa có:
             ```bash
             ssh-keygen -t rsa -b 4096 -C "jenkins_ci@yourdomain.com" -f ~/.ssh/jenkins_deploy_key
-            # Không đặt passphrase cho key này nếu bạn không muốn cấu hình passphrase trong Jenkins.
             ```
-            Bạn sẽ có `jenkins_deploy_key` (private key) và `jenkins_deploy_key.pub` (public key).
-        * **Cấu hình Credential trong Jenkins:**
+            (Không đặt passphrase nếu không muốn cấu hình thêm trong Jenkins).
+        * Trong Jenkins, tạo credential:
             * **Kind:** `SSH Username with private key`
-            * **ID:** `prod-ssh-key` (ví dụ, bạn sẽ dùng ID này).
-            * **Description:** (Tùy chọn) Ví dụ: "SSH Key for Production VPS".
-            * **Username:** User bạn sẽ dùng để SSH vào server Production (ví dụ: `root` hoặc một user riêng cho Jenkins).
-            * **Private Key:** Chọn "Enter directly". Copy **toàn bộ** nội dung của file private key `jenkins_deploy_key` (bao gồm `-----BEGIN RSA PRIVATE KEY-----` và `-----END RSA PRIVATE KEY-----`) và dán vào ô "Key".
-            * **Passphrase:** Để trống nếu key của bạn không có passphrase.
+            * **ID:** `prod-ssh-key` (hoặc ID bạn chọn)
+            * **Username:** User để SSH vào server (ví dụ: `root` hoặc `deploy_user`).
+            * **Private Key:** Chọn "Enter directly", dán toàn bộ nội dung file private key `jenkins_deploy_key`.
 
 ---
 
 ## Phần 3: Chuẩn Bị Môi Trường Production/Staging và Source Code
 
 1.  **Trên Server Production (và Staging nếu có):**
-    * **Cài đặt Docker:** Nếu chưa có, hãy cài Docker theo hướng dẫn cho HĐH của server.
+    * **Cài đặt Docker:**
         ```bash
-        # Ví dụ cho Ubuntu
         sudo apt-get update
         sudo apt-get install -y docker.io
         sudo systemctl start docker
         sudo systemctl enable docker
-        # Thêm user hiện tại (hoặc user Jenkins sẽ dùng) vào group docker để không cần sudo khi chạy lệnh docker
-        # sudo usermod -aG docker $USER 
-        # newgrp docker # Cần logout/login lại hoặc chạy lệnh này để có hiệu lực
+        # sudo usermod -aG docker $USER # Thêm user vào group docker (cần login lại)
         ```
     * **Cấu hình SSH Key-based Authentication:**
-        * Lấy nội dung public key `jenkins_deploy_key.pub` mà bạn đã tạo ở Phần 2, Mục 6c.
+        * Lấy nội dung public key (`jenkins_deploy_key.pub`) đã tạo.
         * Đăng nhập vào server Production.
-        * Thêm public key này vào file `~/.ssh/authorized_keys` của user mà Jenkins sẽ dùng để SSH vào (ví dụ, user `root` hoặc user `jenkins_deploy` nếu bạn tạo riêng):
+        * Thêm public key vào file `~/.ssh/authorized_keys` của user mà Jenkins sẽ dùng để SSH (ví dụ `root`):
             ```bash
             # Nếu user là root
             mkdir -p /root/.ssh
             chmod 700 /root/.ssh
             echo "PASTE_PUBLIC_KEY_CONTENT_HERE" >> /root/.ssh/authorized_keys
             chmod 600 /root/.ssh/authorized_keys
-            chown -R root:root /root/.ssh # Đảm bảo ownership
+            chown -R root:root /root/.ssh 
             ```
-            Nếu dùng user khác, thay `/root/` bằng `/home/your_deploy_user/`.
-        * **Kiểm tra kết nối SSH từ Jenkins Master (khuyến nghị):**
-            Trên server Jenkins Master, thử SSH tới server Production bằng private key và user đã cấu hình để đảm bảo key hoạt động trước khi chạy pipeline.
+        * **Kiểm tra kết nối SSH từ server Jenkins Master:**
             ```bash
-            # Trên Jenkins Master, nếu bạn lưu private key ở ~/.ssh/jenkins_deploy_key
-            ssh -i ~/.ssh/jenkins_deploy_key root@<IP_VPS_PRODUCTION> 'echo "Connection successful"'
+            # Nếu key jenkins_deploy_key nằm trên Jenkins master
+            # ssh -i /path/to/jenkins_deploy_key root@<IP_VPS_PRODUCTION> 'echo "Connection successful"'
             ```
 
 2.  **Chuẩn bị Source Code và Repository GitHub:**
-    * Tạo một thư mục cho project của bạn.
-    * Bên trong thư mục đó, tạo file `index.php` và `Dockerfile` như ví dụ ở Phần 1, Mục 4.
-    * Khởi tạo Git repository, commit code và đẩy lên GitHub:
+    * Tạo thư mục project, thêm `index.php` và `Dockerfile` (như ví dụ ở Phần 1).
+    * Đẩy code lên GitHub:
         ```bash
         git init
         git add .
         git commit -m "Initial commit with PHP app and Dockerfile"
-        # Tạo repository mới trên GitHub (ví dụ: my-php-app)
         git remote add origin [https://github.com/YOUR_USERNAME/my-php-app.git](https://github.com/YOUR_USERNAME/my-php-app.git) # THAY YOUR_USERNAME
         git branch -M main
         git push -u origin main
@@ -197,8 +189,7 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
 
 ## Phần 4: Tạo Jenkins Pipeline (Jenkinsfile)
 
-1.  **Trong thư mục gốc của project (nơi có `index.php` và `Dockerfile`), tạo một file mới tên là `Jenkinsfile`** (không có phần mở rộng).
-    Đây là nội dung mẫu cho `Jenkinsfile` của bạn:
+1.  Trong thư mục gốc của project, tạo file `Jenkinsfile`:
 
     ```groovy
     // Jenkinsfile
@@ -211,23 +202,25 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
         }
 
         environment {
-            // Credentials IDs đã cấu hình trong Jenkins
+            // Credentials IDs - Phải khớp với ID bạn tạo trong Jenkins
             DOCKERHUB_CREDENTIALS_ID = 'dockerhub-credentials' 
             SSH_CREDENTIALS_ID = 'prod-ssh-key'             
 
             // Thông tin Docker Image - THAY THẾ BẰNG THÔNG TIN CỦA BẠN
-            DOCKER_IMAGE_NAME = 'your_dockerhub_username/my-php-app' 
+            DOCKER_REGISTRY_USER = 'your_dockerhub_username' // Username Docker Hub của bạn
+            APP_NAME = 'my-php-app' // Tên ứng dụng (hoặc tên image)
             IMAGE_TAG = "ver${env.BUILD_NUMBER}" 
+            DOCKER_IMAGE_NAME = "${DOCKER_REGISTRY_USER}/${APP_NAME}" // Tên đầy đủ: username/app_name
 
             // Thông tin Server Production - THAY THẾ BẰNG THÔNG TIN CỦA BẠN
             PROD_SERVER_HOST = 'YOUR_PRODUCTION_VPS_IP' 
-            PROD_CONTAINER_NAME = 'my-php-app-prod'
-            PROD_HOST_PORT = 8081 
-            APP_CONTAINER_PORT = 80 
+            PROD_CONTAINER_NAME = "${APP_NAME}-prod" // Tên container trên production
+            PROD_HOST_PORT = 8081 // Port trên VPS map vào port ứng dụng
+            APP_CONTAINER_PORT = 80 // Port ứng dụng chạy trong container
 
             // (Tùy chọn) Thông tin Server Staging
             // STAGING_SERVER_HOST = 'YOUR_STAGING_VPS_IP'
-            // STAGING_CONTAINER_NAME = 'my-php-app-staging'
+            // STAGING_CONTAINER_NAME = "${APP_NAME}-staging"
             // STAGING_HOST_PORT = 8080
         }
 
@@ -257,14 +250,14 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
             stage('3. Build and Push Docker Image') {
                 steps {
                     script {
-                        def fullImageName = "${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG}"
-                        echo "Building Docker image: ${fullImageName}..."
-                        sh "docker build -t ${fullImageName} ."
+                        def fullImageNameWithTag = "${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG}"
+                        echo "Building Docker image: ${fullImageNameWithTag}..."
+                        sh "docker build -t ${fullImageNameWithTag} ."
                         
-                        echo "Pushing Docker image: ${fullImageName} to Docker Hub..."
-                        sh "docker push ${fullImageName}"
+                        echo "Pushing Docker image: ${fullImageNameWithTag} to Docker Hub..."
+                        sh "docker push ${fullImageNameWithTag}"
                         
-                        echo "Image pushed: ${fullImageName}"
+                        echo "Image pushed: ${fullImageNameWithTag}"
                     }
                 }
             }
@@ -310,7 +303,7 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
             stage('5. Deploy to Production') {
                 when { expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' } }
                 steps {
-                    input message: "Proceed with deployment of ${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} to Production?", submitter: 'admins'
+                    input message: "Proceed with deployment of ${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} to Production?", submitter: 'admins' // Giả sử có group 'admins', hoặc bỏ submitter
 
                     script {
                         def remoteProdConfig = [:]
@@ -328,13 +321,13 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
 
                             echo "Deploying ${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} to Production server ${remoteProdConfig.host}..."
                             def deployScriptProd = """
-                                echo 'Pulling image on Production server...'
+                                echo 'Pulling image ${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} on Production server...'
                                 docker pull ${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} || exit 1
-                                echo 'Stopping old container on Production (if any)...'
+                                echo 'Stopping old container ${env.PROD_CONTAINER_NAME} on Production (if any)...'
                                 docker stop ${env.PROD_CONTAINER_NAME} || true
-                                echo 'Removing old container on Production (if any)...'
+                                echo 'Removing old container ${env.PROD_CONTAINER_NAME} on Production (if any)...'
                                 docker rm ${env.PROD_CONTAINER_NAME} || true
-                                echo 'Running new container on Production...'
+                                echo 'Running new container ${env.PROD_CONTAINER_NAME} on Production...'
                                 docker run -d --name ${env.PROD_CONTAINER_NAME} -p ${env.PROD_HOST_PORT}:${env.APP_CONTAINER_PORT} ${env.DOCKER_IMAGE_NAME}:${env.IMAGE_TAG}
                                 echo 'Deployment to Production completed!'
                             """
@@ -349,7 +342,7 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
             always {
                 echo 'Pipeline finished. Cleaning up workspace and Docker on agent...'
                 cleanWs() 
-                sh 'docker system prune -af || true'
+                sh 'docker system prune -af || true' // Thêm || true để không làm fail pipeline nếu prune lỗi
             }
             success {
                 echo '🎉 CI/CD Pipeline finished successfully!'
@@ -361,99 +354,87 @@ Trước khi bắt đầu, bạn cần chuẩn bị:
     }
     ```
 
-2.  **Đẩy `Jenkinsfile` lên Repository GitHub:**
-    ```bash
-    git add Jenkinsfile
-    git commit -m "Add Jenkinsfile for CI/CD pipeline"
-    git push origin main
-    ```
+2.  **Đẩy `Jenkinsfile` lên Repository GitHub.**
 
 ---
 
 ## Phần 5: Tạo và Chạy Jenkins Pipeline Job
 
 1.  **Tạo Job mới trong Jenkins:**
-    * Trên Dashboard Jenkins, nhấn **New Item**.
-    * Đặt tên cho item (ví dụ: `my-php-app-pipeline`).
-    * Chọn **Pipeline**.
-    * Nhấn **OK**.
+    * Dashboard Jenkins > **New Item**.
+    * Tên item: `my-php-app-pipeline`.
+    * Chọn **Pipeline** > **OK**.
 
 2.  **Cấu hình Pipeline Job:**
-    * **Description:** (Tùy chọn) Mô tả pipeline của bạn.
     * **Pipeline section:**
-        * **Definition:** Chọn `Pipeline script from SCM`.
-        * **SCM:** Chọn `Git`.
-        * **Repository URL:** Dán URL của repository GitHub của bạn (ví dụ: `https://github.com/YOUR_USERNAME/my-php-app.git`).
-        * **Credentials:** Chọn credential GitHub PAT (`github-pat`) nếu repository của bạn là private. Nếu public, có thể để `none`.
-        * **Branch Specifier:** Mặc định là `*/main` hoặc `*/master`. Để `*/main` nếu nhánh chính của bạn là `main`.
-        * **Script Path:** Mặc định là `Jenkinsfile`. Giữ nguyên vì bạn đã đặt tên file là `Jenkinsfile`.
-    * Nhấn **Save**.
+        * **Definition:** `Pipeline script from SCM`.
+        * **SCM:** `Git`.
+        * **Repository URL:** URL repo GitHub của bạn.
+        * **Credentials:** Chọn GitHub PAT nếu repo private.
+        * **Branch Specifier:** `*/main`.
+        * **Script Path:** `Jenkinsfile`.
+    * **Save**.
 
-3.  **Chạy Pipeline:**
-    * Sau khi lưu, bạn sẽ thấy trang của Job. Nhấn **Build Now** ở menu bên trái để chạy pipeline lần đầu tiên.
-    * Theo dõi quá trình chạy trong **Build History** và **Console Output** của build đó.
+3.  **Chạy Pipeline:** Nhấn **Build Now**. Theo dõi trong **Build History** và **Console Output**.
 
 ---
 
 ## Phần 6: Giải Thích Sơ Lược về Jenkinsfile
 
-* **`pipeline { ... }`**: Khối chính định nghĩa toàn bộ pipeline.
-* **`agent { docker { ... } }`**: Chỉ định môi trường thực thi pipeline. Ở đây dùng Docker-in-Docker (dind) để có môi trường Docker sạch cho mỗi lần build.
-* **`environment { ... }`**: Định nghĩa các biến môi trường sẽ được sử dụng trong pipeline. **Hãy nhớ thay thế các giá trị placeholder (ví dụ: `YOUR_PRODUCTION_VPS_IP`, `your_dockerhub_username/my-php-app`) bằng thông tin thực tế của bạn.**
-* **`triggers { ... }`**: (Tùy chọn) Định nghĩa cách pipeline được kích hoạt tự động.
-* **`stages { ... }`**: Chia pipeline thành các giai đoạn logic.
-    * **`stage('...') { steps { ... } }`**: Mỗi stage có các bước thực thi.
-    * **`script { ... }`**: Cho phép viết mã Groovy phức tạp hơn bên trong steps.
-    * **`withCredentials([...]) { ... }`**: Truy cập các credentials đã lưu trong Jenkins một cách an toàn.
+* **`pipeline { ... }`**: Khối chính.
+* **`agent { docker { ... } }`**: Môi trường thực thi (dùng Docker-in-Docker).
+* **`environment { ... }`**: Biến môi trường. **NHỚ THAY THẾ CÁC GIÁ TRỊ PLACEHOLDER.**
+* **`triggers { ... }`**: Kích hoạt tự động.
+* **`stages { ... }`**: Các giai đoạn logic.
+    * **`withCredentials([...]) { ... }`**: Dùng credentials an toàn.
     * **`sh "..."`**: Thực thi lệnh shell.
-    * **`sshCommand remote: ..., command: ...`**: Thực thi lệnh trên server từ xa thông qua SSH.
-    * **`input message: ...`**: Tạm dừng pipeline để chờ xác nhận thủ công.
-* **`post { ... }`**: Các hành động được thực hiện sau khi pipeline hoàn thành.
-    * **`cleanWs()`**: Dọn dẹp workspace của Jenkins job.
+    * **`sshCommand remote: ..., command: ...`**: Thực thi lệnh qua SSH.
+    * **`input message: ...`**: Chờ xác nhận thủ công.
+* **`post { ... }`**: Hành động sau khi pipeline hoàn thành.
+    * **`cleanWs()`**: Dọn dẹp workspace.
 
 ---
 
 ## Phần 7: Tùy Chỉnh và Mở Rộng
 
-* **Testing:** Thêm các stage để chạy unit test, integration test.
-* **Multiple Environments:** Tạo các stage deploy riêng cho Staging, UAT.
-* **Notifications:** Tích hợp gửi thông báo qua Email, Slack, Microsoft Teams.
-* **Security Scanning:** Tích hợp các công cụ quét lỗ hổng bảo mật.
+* **Testing:** Thêm stage chạy unit test, integration test.
+* **Multiple Environments:** Tạo stage deploy riêng cho Staging, UAT.
+* **Notifications:** Tích hợp gửi thông báo qua Email, Slack.
+* **Security Scanning:** Tích hợp công cụ quét lỗ hổng.
 * **Rollback Strategies:** Xây dựng cơ chế rollback.
-* **Dynamic Tagging:** Sử dụng Git commit hash hoặc timestamp cho `IMAGE_TAG`.
+* **Dynamic Tagging:** Dùng Git commit hash cho `IMAGE_TAG`.
     ```groovy
-    // Ví dụ tag bằng Git commit hash ngắn
-    // IMAGE_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+    // Ví dụ: IMAGE_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
     ```
-* **Sử dụng Docker Hub Access Token:** Thay vì password, tạo Access Token trên Docker Hub và dùng nó làm password trong Jenkins credential.
+* **Docker Hub Access Token:** Dùng Access Token thay vì password cho Docker Hub.
 
 ---
 
 ## Phần 8: Gỡ Lỗi (Troubleshooting) Phổ Biến
 
 * **Permission Denied (SSH):**
-    * Đảm bảo public key từ Jenkins credential (`prod-ssh-key`) đã được thêm **chính xác** vào file `~/.ssh/authorized_keys` trên server đích cho đúng user.
-    * Kiểm tra quyền của thư mục `~/.ssh` (`700`) và file `authorized_keys` (`600`) trên server đích.
-    * Kiểm tra log `sshd` trên server đích (`/var/log/auth.log`, `/var/log/secure`, hoặc `journalctl -u sshd -f`).
-    * Đảm bảo `Username` trong SSH credential của Jenkins khớp với user trên server đích.
+    * Public key từ Jenkins credential (`prod-ssh-key`) phải được thêm **chính xác** vào `~/.ssh/authorized_keys` trên server đích cho đúng user.
+    * Quyền thư mục `~/.ssh` (`700`) và file `authorized_keys` (`600`) trên server đích.
+    * Log `sshd` trên server đích (`/var/log/auth.log`, `/var/log/secure`, `journalctl -u sshd -f`).
+    * `Username` trong SSH credential của Jenkins khớp với user trên server đích.
 
 * **Docker Login Failed:**
-    * Kiểm tra lại Docker Hub username và password/access token trong Jenkins credential.
-    * Đảm bảo ID credential trong Jenkinsfile (`env.DOCKERHUB_CREDENTIALS_ID`) khớp với ID bạn đã tạo.
+    * Kiểm tra Docker Hub username/password (hoặc token) trong Jenkins credential.
+    * ID credential trong Jenkinsfile (`env.DOCKERHUB_CREDENTIALS_ID`) khớp ID đã tạo.
 
 * **Docker Build Failed:**
-    * Kiểm tra lỗi trong `Dockerfile`.
-    * Kiểm tra log build chi tiết trong Console Output của Jenkins.
+    * Lỗi trong `Dockerfile`.
+    * Log build chi tiết trong Console Output của Jenkins.
 
-* **Plugin `sshCommand` Not Found (`NoSuchMethodError`):**
-    * Đảm bảo plugin "SSH Pipeline Steps" đã được cài đặt và kích hoạt.
+* **`sshCommand` Not Found (`NoSuchMethodError`):**
+    * Plugin "SSH Pipeline Steps" phải được cài đặt và kích hoạt.
 
 * **`allowAnyHosts = true` không hoạt động:**
-    * Thử thay thế bằng `knownHosts: 'NONE'` trong map `remote` của `sshCommand`.
+    * Thử thay bằng `knownHosts: 'NONE'` trong map `remote` của `sshCommand`.
 
 ---
 
 ## Kết luận
-Việc thiết lập CI/CD là một quá trình đầu tư ban đầu nhưng mang lại lợi ích to lớn về lâu dài. Hướng dẫn này cung cấp một nền tảng cơ bản. Bạn có thể và nên tùy chỉnh nó để phù hợp với nhu cầu của dự án.
+Thiết lập CI/CD là một quá trình đầu tư ban đầu nhưng mang lại lợi ích lớn. Hướng dẫn này cung cấp nền tảng cơ bản. Hãy tùy chỉnh để phù hợp với dự án của bạn.
 
 Chúc bạn thành công!
