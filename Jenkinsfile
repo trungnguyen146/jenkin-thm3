@@ -103,7 +103,6 @@ pipeline {
         // }
 
 
-            stages {
         stage('Test SSH Simple') {
             steps {
                 sshagent([env.SSH_CREDENTIALS_ID]) {
