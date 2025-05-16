@@ -81,24 +81,21 @@ pipeline {
             }
         }
 
-        stage('Build and Push Image') {
+        stage('Build, Login & Push Image') {
             steps {
-                sh """
-                    docker buildx build -t ${FULL_IMAGE} -f Dockerfile . --push || {
-                        docker build -t ${FULL_IMAGE} -f Dockerfile .
-                        docker push ${FULL_IMAGE}
-                    }
-                """
-            }
-        }
-
-        stage('Test SSH Simple') {
-            steps {
-                sshagent([env.SSH_CREDENTIALS_ID]) {
-                    sh "ssh -o StrictHostKeyChecking=no root@${env.VPS_PRODUCTION_HOST} 'echo \"SSH connection successful\"'"
+                withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        docker buildx build -t ${FULL_IMAGE} -f Dockerfile . --push || {
+                            docker build -t ${FULL_IMAGE} -f Dockerfile .
+                            docker push ${FULL_IMAGE}
+                        }
+                        docker logout
+                    """
                 }
             }
         }
+
 
         stage('Deploy to Production') {
             when {
@@ -119,7 +116,7 @@ pipeline {
                 }
             }
         }
-    } // đóng stages
+    } 
 
     post {
         always {
@@ -133,5 +130,5 @@ pipeline {
             echo '💔 Pipeline failed. Check logs.'
         }
     }
-} // đóng pipeline
+} 
 
