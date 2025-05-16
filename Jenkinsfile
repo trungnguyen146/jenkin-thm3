@@ -51,178 +51,187 @@ pipeline {
         SSH_CREDENTIALS_ID = 'Prod_CredID' // ID của Jenkins Credential loại "SSH Username with private key"
     }
 
-    triggers {
-        pollSCM('H/2 * * * *')
-    }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Login to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    script {
-                        echo "🔐 Logging in to Docker Hub as ${DOCKER_USER}..."
-                        sh """
-                            echo "\${DOCKER_PASS}" | docker login -u "\${DOCKER_USER}" --password-stdin
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Build and Push Image') {
-            steps {
-                script {
-                    echo "🚧 Building and pushing image: ${env.FULL_IMAGE}"
-                    sh """
-                        docker buildx build -t "${env.FULL_IMAGE}" -f Dockerfile . --push || {
-                            echo "⚠️ buildx failed, falling back to classic build"
-                            docker build -t "${env.FULL_IMAGE}" -f Dockerfile .
-                            docker push "${env.FULL_IMAGE}"
-                        }
-                    """
-                }
-            }
-        }
-
-
-
-
-    stage('Test SSH Connection with Key (using SSH Steps)') {
+    stage('Test SSH Simple') {
     steps {
-        script {
-            withCredentials([sshUserPrivateKey(
-                credentialsId: "${env.SSH_CREDENTIALS_ID}",
-                keyFileVariable: 'sshKeyFile',
-                usernameVariable: 'sshUser'
-            )]) {
-                def remote = [
-                    name: "production-vps-test",
-                    host: env.VPS_PRODUCTION_HOST,
-                    user: sshUser,
-                    identityFile: sshKeyFile,
-                    allowAnyHosts: true
-                ]
-                echo "🩺 Đang kiểm tra kết nối SSH tới ${sshUser}@${env.VPS_PRODUCTION_HOST} ..."
-                sshCommand remote: remote, command: 'echo "✅ SSH kết nối thành công đến $(hostname)"'
-            }
+        sshagent(['Prod_CredID']) {
+            sh "ssh -o StrictHostKeyChecking=no root@${env.VPS_PRODUCTION_HOST} 'echo \"SSH connection successful\"'"
         }
     }
 }
 
+//     triggers {
+//         pollSCM('H/2 * * * *')
+//     }
+
+//     stages {
+//         stage('Checkout') {
+//             steps {
+//                 checkout scm
+//             }
+//         }
+
+//         stage('Login to Docker Hub') {
+//             steps {
+//                 withCredentials([usernamePassword(credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+//                     script {
+//                         echo "🔐 Logging in to Docker Hub as ${DOCKER_USER}..."
+//                         sh """
+//                             echo "\${DOCKER_PASS}" | docker login -u "\${DOCKER_USER}" --password-stdin
+//                         """
+//                     }
+//                 }
+//             }
+//         }
+
+//         stage('Build and Push Image') {
+//             steps {
+//                 script {
+//                     echo "🚧 Building and pushing image: ${env.FULL_IMAGE}"
+//                     sh """
+//                         docker buildx build -t "${env.FULL_IMAGE}" -f Dockerfile . --push || {
+//                             echo "⚠️ buildx failed, falling back to classic build"
+//                             docker build -t "${env.FULL_IMAGE}" -f Dockerfile .
+//                             docker push "${env.FULL_IMAGE}"
+//                         }
+//                     """
+//                 }
+//             }
+//         }
+
+
+
+
+//     stage('Test SSH Connection with Key (using SSH Steps)') {
+//     steps {
+//         script {
+//             withCredentials([sshUserPrivateKey(
+//                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
+//                 keyFileVariable: 'sshKeyFile',
+//                 usernameVariable: 'sshUser'
+//             )]) {
+//                 def remote = [
+//                     name: "production-vps-test",
+//                     host: env.VPS_PRODUCTION_HOST,
+//                     user: sshUser,
+//                     identityFile: sshKeyFile,
+//                     allowAnyHosts: true
+//                 ]
+//                 echo "🩺 Đang kiểm tra kết nối SSH tới ${sshUser}@${env.VPS_PRODUCTION_HOST} ..."
+//                 sshCommand remote: remote, command: 'echo "✅ SSH kết nối thành công đến $(hostname)"'
+//             }
+//         }
+//     }
+// }
+
         
 
-        // stage('Test SSH Connection with Key (using SSH Steps)') { // Đã cập nhật tên stage cho rõ ràng
-        //     steps {
-        //         script {
-        //             // 1. Khởi tạo map 'remoteTestConfig'
-        //             def remoteTestConfig = [:]
+//         // stage('Test SSH Connection with Key (using SSH Steps)') { // Đã cập nhật tên stage cho rõ ràng
+//         //     steps {
+//         //         script {
+//         //             // 1. Khởi tạo map 'remoteTestConfig'
+//         //             def remoteTestConfig = [:]
                     
-        //             // 2. Điền thông tin cơ bản
-        //             remoteTestConfig.name = "production-vps-test"      // Tên mô tả
-        //             remoteTestConfig.host = env.VPS_PRODUCTION_HOST     // IP host từ biến môi trường
-        //             remoteTestConfig.allowAnyHosts = true               // Giống ví dụ của bạn. Nếu lỗi, thử: knownHosts: 'NONE'
-        //             // remoteTestConfig.port = 22                       // Port mặc định là 22, có thể bỏ qua
-        //             // remoteTestConfig.options = [ConnectTimeout: '10'] // Tùy chọn timeout, nếu plugin hỗ trợ dạng này
+//         //             // 2. Điền thông tin cơ bản
+//         //             remoteTestConfig.name = "production-vps-test"      // Tên mô tả
+//         //             remoteTestConfig.host = env.VPS_PRODUCTION_HOST     // IP host từ biến môi trường
+//         //             remoteTestConfig.allowAnyHosts = true               // Giống ví dụ của bạn. Nếu lỗi, thử: knownHosts: 'NONE'
+//         //             // remoteTestConfig.port = 22                       // Port mặc định là 22, có thể bỏ qua
+//         //             // remoteTestConfig.options = [ConnectTimeout: '10'] // Tùy chọn timeout, nếu plugin hỗ trợ dạng này
 
-        //             // 3. Lấy credential và hoàn thiện map
-        //             withCredentials([sshUserPrivateKey(
-        //                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
-        //                 keyFileVariable: 'testKeyFile',          // Tên biến cho file key
-        //                 passphraseVariable: '',                  // Để trống nếu key không có passphrase
-        //                 usernameVariable: 'testSshUsername'      // Tên biến cho username
-        //             )]) {
-        //                 remoteTestConfig.user = testSshUsername
-        //                 remoteTestConfig.identityFile = testKeyFile
+//         //             // 3. Lấy credential và hoàn thiện map
+//         //             withCredentials([sshUserPrivateKey(
+//         //                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
+//         //                 keyFileVariable: 'testKeyFile',          // Tên biến cho file key
+//         //                 passphraseVariable: '',                  // Để trống nếu key không có passphrase
+//         //                 usernameVariable: 'testSshUsername'      // Tên biến cho username
+//         //             )]) {
+//         //                 remoteTestConfig.user = testSshUsername
+//         //                 remoteTestConfig.identityFile = testKeyFile
 
-        //                 echo "🩺 Đang kiểm tra kết nối SSH tới ${remoteTestConfig.user}@${remoteTestConfig.host} bằng SSH Steps plugin..."
+//         //                 echo "🩺 Đang kiểm tra kết nối SSH tới ${remoteTestConfig.user}@${remoteTestConfig.host} bằng SSH Steps plugin..."
                         
-        //                 // 4. Thực thi lệnh test
-        //                 def testConnectionCommand = 'echo "✅ Kết nối SSH Steps thành công tới $(hostname) với tư cách $(whoami)! Ngày giờ server: $(date)"'
-        //                 sshCommand remote: remoteTestConfig, command: testConnectionCommand
+//         //                 // 4. Thực thi lệnh test
+//         //                 def testConnectionCommand = 'echo "✅ Kết nối SSH Steps thành công tới $(hostname) với tư cách $(whoami)! Ngày giờ server: $(date)"'
+//         //                 sshCommand remote: remoteTestConfig, command: testConnectionCommand
                         
-        //                 echo "✅ Kiểm tra kết nối SSH bằng SSH Steps thành công."
-        //             }
-        //         }
-        //     }
-        // }
+//         //                 echo "✅ Kiểm tra kết nối SSH bằng SSH Steps thành công."
+//         //             }
+//         //         }
+//         //     }
+//         // }
 
-        // stage('Deploy to Production') {
-        //     when {
-        //         expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-        //     }
-        //     steps {
-        //         input message: "Proceed with deployment of ${env.FULL_IMAGE} to Production?"
+//         // stage('Deploy to Production') {
+//         //     when {
+//         //         expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+//         //     }
+//         //     steps {
+//         //         input message: "Proceed with deployment of ${env.FULL_IMAGE} to Production?"
                 
-        //         // "Cách 1" được cập nhật để sử dụng SSH Steps plugin
-        //         script {
-        //             // 1. Khởi tạo map 'remoteDeployConfig'
-        //             def remoteDeployConfig = [:]
+//         //         // "Cách 1" được cập nhật để sử dụng SSH Steps plugin
+//         //         script {
+//         //             // 1. Khởi tạo map 'remoteDeployConfig'
+//         //             def remoteDeployConfig = [:]
 
-        //             // 2. Điền thông tin cơ bản
-        //             remoteDeployConfig.name = "production-vps-deploy"
-        //             remoteDeployConfig.host = env.VPS_PRODUCTION_HOST
-        //             remoteDeployConfig.allowAnyHosts = true // Nếu lỗi, thử: knownHosts: 'NONE'
-        //             // remoteDeployConfig.port = 22
+//         //             // 2. Điền thông tin cơ bản
+//         //             remoteDeployConfig.name = "production-vps-deploy"
+//         //             remoteDeployConfig.host = env.VPS_PRODUCTION_HOST
+//         //             remoteDeployConfig.allowAnyHosts = true // Nếu lỗi, thử: knownHosts: 'NONE'
+//         //             // remoteDeployConfig.port = 22
 
-        //             // 3. Lấy credential và hoàn thiện map
-        //             withCredentials([sshUserPrivateKey(
-        //                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
-        //                 keyFileVariable: 'deployKeyFile',
-        //                 passphraseVariable: '',
-        //                 usernameVariable: 'deploySshUsername'
-        //             )]) {
-        //                 remoteDeployConfig.user = deploySshUsername
-        //                 remoteDeployConfig.identityFile = deployKeyFile
+//         //             // 3. Lấy credential và hoàn thiện map
+//         //             withCredentials([sshUserPrivateKey(
+//         //                 credentialsId: "${env.SSH_CREDENTIALS_ID}",
+//         //                 keyFileVariable: 'deployKeyFile',
+//         //                 passphraseVariable: '',
+//         //                 usernameVariable: 'deploySshUsername'
+//         //             )]) {
+//         //                 remoteDeployConfig.user = deploySshUsername
+//         //                 remoteDeployConfig.identityFile = deployKeyFile
 
-        //                 echo "🚀 Đang triển khai tới Production (${remoteDeployConfig.user}@${remoteDeployConfig.host}:${env.HOST_PORT_PRODUCTION}) bằng SSH Steps plugin..."
+//         //                 echo "🚀 Đang triển khai tới Production (${remoteDeployConfig.user}@${remoteDeployConfig.host}:${env.HOST_PORT_PRODUCTION}) bằng SSH Steps plugin..."
                         
-        //                 // 4. Chuẩn bị chuỗi lệnh deploy (sử dụng GString để ${env.VAR} được nội suy bởi Groovy)
-        //                 def deployCommands = """
-        //                     echo 'Pulling image ${env.FULL_IMAGE}...' && \\
-        //                     docker pull '${env.FULL_IMAGE}' && \\
-        //                     echo 'Stopping container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-        //                     docker stop '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
-        //                     echo 'Removing container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-        //                     docker rm '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
-        //                     echo 'Running new container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
-        //                     docker run -d --name '${env.CONTAINER_NAME_PRODUCTION}' -p '${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT}' '${env.FULL_IMAGE}' && \\
-        //                     echo '✅ Đã triển khai lên Production'
-        //                 """
+//         //                 // 4. Chuẩn bị chuỗi lệnh deploy (sử dụng GString để ${env.VAR} được nội suy bởi Groovy)
+//         //                 def deployCommands = """
+//         //                     echo 'Pulling image ${env.FULL_IMAGE}...' && \\
+//         //                     docker pull '${env.FULL_IMAGE}' && \\
+//         //                     echo 'Stopping container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
+//         //                     docker stop '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
+//         //                     echo 'Removing container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
+//         //                     docker rm '${env.CONTAINER_NAME_PRODUCTION}' || true && \\
+//         //                     echo 'Running new container ${env.CONTAINER_NAME_PRODUCTION}...' && \\
+//         //                     docker run -d --name '${env.CONTAINER_NAME_PRODUCTION}' -p '${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT}' '${env.FULL_IMAGE}' && \\
+//         //                     echo '✅ Đã triển khai lên Production'
+//         //                 """
                         
-        //                 // 5. Thực thi lệnh deploy
-        //                 sshCommand remote: remoteDeployConfig, command: deployCommands
+//         //                 // 5. Thực thi lệnh deploy
+//         //                 sshCommand remote: remoteDeployConfig, command: deployCommands
                         
-        //                 echo "✅ Các lệnh triển khai đã được gửi qua SSH Steps plugin."
-        //             }
-        //         }
+//         //                 echo "✅ Các lệnh triển khai đã được gửi qua SSH Steps plugin."
+//         //             }
+//         //         }
 
-        //         // "Cách 2": Sử dụng SSH Agent Plugin (vẫn giữ nguyên, đang được comment out)
-        //         /*
-        //         sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-        //             // ... (code cho SSH Agent như trước) ...
-        //         }
-        //         */
-        //     }
-        // }
-    } // Kết thúc khối stages
+//         //         // "Cách 2": Sử dụng SSH Agent Plugin (vẫn giữ nguyên, đang được comment out)
+//         //         /*
+//         //         sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+//         //             // ... (code cho SSH Agent như trước) ...
+//         //         }
+//         //         */
+//         //     }
+//         // }
+//     } // Kết thúc khối stages
 
-    post {
-        always {
-            echo '🧹 Cleaning up Docker system on agent...'
-            sh 'docker system prune -af'
-        }
-        success {
-            echo "🎉 Pipeline finished successfully!"
-        }
-        failure {
-            echo "💔 Pipeline failed. Check logs."
-        }
-    }
-} // Kết thúc khối pipeline
+//     post {
+//         always {
+//             echo '🧹 Cleaning up Docker system on agent...'
+//             sh 'docker system prune -af'
+//         }
+//         success {
+//             echo "🎉 Pipeline finished successfully!"
+//         }
+//         failure {
+//             echo "💔 Pipeline failed. Check logs."
+//         }
+//     }
+// } // Kết thúc khối pipeline
 
