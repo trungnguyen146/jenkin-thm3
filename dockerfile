@@ -10,7 +10,7 @@ COPY index.php /var/www/html/
 COPY images/ /var/www/html/images/
 
 # Cấu hình Apache để chạy trên port 80
-EXPOSE 80
+EXPOSE 8080
 
 # Khởi động Apache
 CMD ["apache2-foreground"]
