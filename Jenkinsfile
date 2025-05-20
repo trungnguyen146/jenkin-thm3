@@ -95,7 +95,7 @@ pipeline {
                     docker pull ${env.FULL_IMAGE}
                     docker stop ${env.CONTAINER_NAME_PRODUCTION} || true
                     docker rm ${env.CONTAINER_NAME_PRODUCTION} || true
-                    docker run -d --name ${env.CONTAINER_NAME_PRODUCTION} -p 8080:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
+                    docker run -d --name ${env.CONTAINER_NAME_PRODUCTION} -p 8880:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
                     echo "✅ Deployed locally"
                 """
             }
