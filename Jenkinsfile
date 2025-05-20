@@ -89,21 +89,17 @@ pipeline {
 
 
 
-        stage('Deploy to Staging (Local)') {
+        stage('Deploy to Local') {
             steps {
-                script {
-                    echo "🚀 Deploying container to Staging (Local)..."
-                    sh "docker pull ${FULL_IMAGE}"
-                    sh """
-                        docker stop \${CONTAINER_NAME_STAGING_LOCAL} || true
-                        docker rm \${CONTAINER_NAME_STAGING_LOCAL} || true
-                    """
-                    sh "docker run -d --name \${CONTAINER_NAME_STAGING_LOCAL} -p \${HOST_PORT_STAGING_LOCAL}:\${APPLICATION_PORT} ${FULL_IMAGE}"
-                    echo "✅ Deployed to Staging (Local) on port ${HOST_PORT_STAGING_LOCAL}"
-                }
+                sh """
+                    docker pull ${env.FULL_IMAGE}
+                    docker stop ${env.CONTAINER_NAME_PRODUCTION} || true
+                    docker rm ${env.CONTAINER_NAME_PRODUCTION} || true
+                    docker run -d --name ${env.CONTAINER_NAME_PRODUCTION} -p ${env.HOST_PORT_PRODUCTION}:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
+                    echo "✅ Deployed locally"
+                """
             }
         }
-
 
 
         stage('Deploy to Production') {
