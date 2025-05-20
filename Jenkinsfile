@@ -89,18 +89,17 @@ pipeline {
 
 
 
-        stage('Deploy to Staging') {
+        stage('Deploy to Staging (Local)') {
             steps {
-                sshagent([env.SSH_CREDENTIALS_ID_STAGING]) {
+                script {
+                    echo "🚀 Deploying container to Staging (Local)..."
+                    sh "docker pull ${FULL_IMAGE}"
                     sh """
-                        ssh -o StrictHostKeyChecking=no -T root@${env.VPS_STAGING_HOST} '
-                            docker pull ${env.FULL_IMAGE}
-                            docker stop ${env.CONTAINER_NAME_STAGING} || true
-                            docker rm ${env.CONTAINER_NAME_STAGING} || true
-                            docker run -d --name ${env.CONTAINER_NAME_STAGING} -p ${env.HOST_PORT_STAGING}:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
-                            echo "✅ Deployed to Staging"
-                        '
+                        docker stop \${CONTAINER_NAME_STAGING_LOCAL} || true
+                        docker rm \${CONTAINER_NAME_STAGING_LOCAL} || true
                     """
+                    sh "docker run -d --name \${CONTAINER_NAME_STAGING_LOCAL} -p \${HOST_PORT_STAGING_LOCAL}:\${APPLICATION_PORT} ${FULL_IMAGE}"
+                    echo "✅ Deployed to Staging (Local) on port ${HOST_PORT_STAGING_LOCAL}"
                 }
             }
         }
