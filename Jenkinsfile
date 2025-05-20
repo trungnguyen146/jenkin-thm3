@@ -55,8 +55,8 @@ pipeline {
 
         VPS_PRODUCTION_HOST = '14.225.219.14'
         CONTAINER_NAME_PRODUCTION = 'php-container-prod'
-        HOST_PORT_PRODUCTION = 8077
-        APPLICATION_PORT = 8077
+        HOST_PORT_PRODUCTION = 80
+        APPLICATION_PORT = 80
         SSH_CREDENTIALS_ID = 'Prod_CredID'
     }
 
