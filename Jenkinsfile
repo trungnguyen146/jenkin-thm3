@@ -88,6 +88,25 @@ pipeline {
         }
 
 
+
+        stage('Deploy to Staging') {
+            steps {
+                sshagent([env.SSH_CREDENTIALS_ID_STAGING]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -T root@${env.VPS_STAGING_HOST} '
+                            docker pull ${env.FULL_IMAGE}
+                            docker stop ${env.CONTAINER_NAME_STAGING} || true
+                            docker rm ${env.CONTAINER_NAME_STAGING} || true
+                            docker run -d --name ${env.CONTAINER_NAME_STAGING} -p ${env.HOST_PORT_STAGING}:${env.APPLICATION_PORT} ${env.FULL_IMAGE}
+                            echo "✅ Deployed to Staging"
+                        '
+                    """
+                }
+            }
+        }
+
+
+
         stage('Deploy to Production') {
             when {
                 expression { currentBuild.currentResult == null || currentBuild.currentResult == 'SUCCESS' }
